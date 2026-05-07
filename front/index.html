@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar Sesión — MedEstudios</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <i class="bi bi-hospital"></i>
+    </div>
+    <h1 class="login-title">MedEstudios</h1>
+    <p class="login-subtitle">Sistema de Gestión de Estudios Médicos</p>
+
+    <div id="login-error" class="alert alert-danger d-none" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <span id="login-error-text"></span>
+    </div>
+
+    <form id="login-form" novalidate>
+      <div class="mb-3">
+        <label for="mail" class="form-label">Correo electrónico</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+          <input
+            type="email"
+            id="mail"
+            name="mail"
+            class="form-control"
+            placeholder="usuario@hospital.com"
+            required
+            autocomplete="email"
+          />
+        </div>
+        <div class="invalid-feedback">Ingrese un correo electrónico válido.</div>
+      </div>
+
+      <div class="mb-4">
+        <label for="password" class="form-label">Contraseña</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-lock"></i></span>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control"
+            placeholder="••••••••"
+            required
+            autocomplete="current-password"
+          />
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            id="toggle-password"
+            tabindex="-1"
+            title="Mostrar/ocultar contraseña"
+          >
+            <i class="bi bi-eye" id="eye-icon"></i>
+          </button>
+        </div>
+        <div class="invalid-feedback">Ingrese su contraseña.</div>
+      </div>
+
+      <button
+        type="submit"
+        id="btn-login"
+        class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
+        style="padding: 0.65rem;"
+      >
+        <span id="btn-login-text">Iniciar Sesión</span>
+        <span id="btn-login-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // Redirect if already logged in
+  (function () {
+    if (isLoggedIn()) {
+      redirectToDashboard();
+    }
+  })();
+
+  // Toggle password visibility
+  const toggleBtn = document.getElementById('toggle-password');
+  const pwdInput  = document.getElementById('password');
+  const eyeIcon   = document.getElementById('eye-icon');
+
+  toggleBtn.addEventListener('click', () => {
+    const isHidden = pwdInput.type === 'password';
+    pwdInput.type  = isHidden ? 'text' : 'password';
+    eyeIcon.className = isHidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+  });
+
+  // Form submit
+  const form         = document.getElementById('login-form');
+  const errorBox     = document.getElementById('login-error');
+  const errorText    = document.getElementById('login-error-text');
+  const btnText      = document.getElementById('btn-login-text');
+  const btnSpinner   = document.getElementById('btn-login-spinner');
+  const btnSubmit    = document.getElementById('btn-login');
+
+  function showError(msg) {
+    errorText.textContent = msg;
+    errorBox.classList.remove('d-none');
+  }
+
+  function hideError() {
+    errorBox.classList.add('d-none');
+  }
+
+  function setLoading(loading) {
+    btnSubmit.disabled    = loading;
+    btnText.textContent   = loading ? 'Iniciando sesión…' : 'Iniciar Sesión';
+    btnSpinner.classList.toggle('d-none', !loading);
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideError();
+
+    // Client-side validation
+    const mailVal = document.getElementById('mail').value.trim();
+    const pwdVal  = document.getElementById('password').value;
+
+    form.classList.add('was-validated');
+
+    if (!form.checkValidity()) return;
+
+    setLoading(true);
+    try {
+      await login(mailVal, pwdVal);
+    } catch (err) {
+      showError(err.message || 'Error al iniciar sesión.');
+    } finally {
+      setLoading(false);
+    }
+  });
+</script>
+</body>
+</html>

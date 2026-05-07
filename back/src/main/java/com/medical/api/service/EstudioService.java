@@ -1,0 +1,292 @@
+package com.medical.api.service;
+
+import com.medical.api.dto.EstudioRequest;
+import com.medical.api.dto.EstudioResponse;
+import com.medical.api.exception.ResourceNotFoundException;
+import com.medical.api.exception.UnauthorizedException;
+import com.medical.api.model.Estudio;
+import com.medical.api.repository.EstudioRepository;
+import com.medical.api.repository.MedicoRepository;
+import com.medical.api.repository.PacienteRepository;
+import com.medical.api.security.MedicoPrincipal;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.tika.Tika;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class EstudioService {
+
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("pdf", "jpg", "jpeg", "png");
+    private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
+            "application/pdf",
+            "image/jpeg",
+            "image/jpg",
+            "image/png"
+    );
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+    private final EstudioRepository estudioRepository;
+    private final MedicoRepository medicoRepository;
+    private final PacienteRepository pacienteRepository;
+
+    @Value("${app.upload.path:./uploads}")
+    private String uploadBasePath;
+
+    public List<EstudioResponse> findAll(MedicoPrincipal principal) {
+        List<Estudio> estudios;
+        if (principal.isAdmin()) {
+            estudios = estudioRepository.findAll();
+        } else {
+            estudios = estudioRepository.findByMedicoId(principal.getMedicoId());
+        }
+        return estudios.stream()
+                .filter(Estudio::isActivo)
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public EstudioResponse findById(String id, MedicoPrincipal principal) {
+        Estudio estudio = estudioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
+
+        checkAccess(estudio, principal);
+        return toResponse(estudio);
+    }
+
+    public EstudioResponse create(EstudioRequest request, MultipartFile file, MedicoPrincipal principal) {
+        String medicoId;
+        if (principal.isAdmin()) {
+            if (request.getMedicoId() == null || request.getMedicoId().isBlank()) {
+                throw new IllegalArgumentException("El medicoId es requerido para ADMIN");
+            }
+            medicoId = request.getMedicoId();
+            medicoRepository.findById(medicoId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Médico no encontrado"));
+        } else {
+            medicoId = principal.getMedicoId();
+        }
+
+        pacienteRepository.findById(request.getPacienteId())
+                .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
+
+        String archivoPath = null;
+        if (file != null && !file.isEmpty()) {
+            archivoPath = saveFile(file);
+        }
+
+        Estudio estudio = Estudio.builder()
+                .id(UUID.randomUUID().toString())
+                .fecha(request.getFecha())
+                .nombre(request.getNombre())
+                .observaciones(request.getObservaciones())
+                .pacienteId(request.getPacienteId())
+                .medicoId(medicoId)
+                .archivoPath(archivoPath)
+                .activo(true)
+                .build();
+
+        estudioRepository.save(estudio);
+        log.info("Created estudio with id: {}", estudio.getId());
+        return toResponse(estudio);
+    }
+
+    public EstudioResponse update(String id, EstudioRequest request, MultipartFile file, MedicoPrincipal principal) {
+        Estudio estudio = estudioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
+
+        checkAccess(estudio, principal);
+
+        pacienteRepository.findById(request.getPacienteId())
+                .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
+
+        estudio.setFecha(request.getFecha());
+        estudio.setNombre(request.getNombre());
+        estudio.setObservaciones(request.getObservaciones());
+        estudio.setPacienteId(request.getPacienteId());
+
+        if (principal.isAdmin() && request.getMedicoId() != null && !request.getMedicoId().isBlank()) {
+            medicoRepository.findById(request.getMedicoId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Médico no encontrado"));
+            estudio.setMedicoId(request.getMedicoId());
+        }
+
+        if (file != null && !file.isEmpty()) {
+            // Delete old file if present
+            if (estudio.getArchivoPath() != null) {
+                deleteFile(estudio.getArchivoPath());
+            }
+            estudio.setArchivoPath(saveFile(file));
+        }
+
+        estudioRepository.save(estudio);
+        log.info("Updated estudio with id: {}", id);
+        return toResponse(estudio);
+    }
+
+    public void delete(String id, MedicoPrincipal principal) {
+        Estudio estudio = estudioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
+
+        checkAccess(estudio, principal);
+
+        estudio.setActivo(false);
+        estudioRepository.save(estudio);
+        log.info("Soft-deleted estudio with id: {}", id);
+    }
+
+    public Resource getArchivoResource(String id, MedicoPrincipal principal) {
+        Estudio estudio = estudioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
+
+        checkAccess(estudio, principal);
+
+        if (estudio.getArchivoPath() == null) {
+            throw new ResourceNotFoundException("El estudio no tiene archivo adjunto");
+        }
+
+        try {
+            Path filePath = Paths.get(uploadBasePath).resolve(estudio.getArchivoPath()).normalize();
+            // Prevent path traversal: ensure file is within upload directory
+            Path uploadDir = Paths.get(uploadBasePath).toAbsolutePath().normalize();
+            if (!filePath.toAbsolutePath().normalize().startsWith(uploadDir)) {
+                throw new UnauthorizedException("Acceso denegado al archivo");
+            }
+
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists() || !resource.isReadable()) {
+                throw new ResourceNotFoundException("Archivo no encontrado o no legible");
+            }
+            return resource;
+        } catch (IOException e) {
+            log.error("Error accessing file for estudio id: {}", id);
+            throw new RuntimeException("Error al acceder al archivo");
+        }
+    }
+
+    public String getArchivoContentType(String id) {
+        Estudio estudio = estudioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
+
+        if (estudio.getArchivoPath() == null) {
+            return "application/octet-stream";
+        }
+
+        String filename = estudio.getArchivoPath();
+        String ext = getExtension(filename).toLowerCase();
+        return switch (ext) {
+            case "pdf" -> "application/pdf";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            default -> "application/octet-stream";
+        };
+    }
+
+    private String saveFile(MultipartFile file) {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isBlank()) {
+            throw new IllegalArgumentException("Nombre de archivo inválido");
+        }
+
+        // Sanitize filename - prevent path traversal
+        String sanitized = Paths.get(originalFilename).getFileName().toString()
+                .replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        String ext = getExtension(sanitized).toLowerCase();
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new IllegalArgumentException("Tipo de archivo no permitido. Solo se aceptan: pdf, jpg, jpeg, png");
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("El archivo excede el tamaño máximo de 10MB");
+        }
+
+        // Validate MIME type
+        try {
+            Tika tika = new Tika();
+            String mimeType = tika.detect(file.getInputStream());
+            if (!ALLOWED_MIME_TYPES.contains(mimeType)) {
+                throw new IllegalArgumentException("Tipo MIME no permitido: " + mimeType);
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("No se pudo verificar el tipo del archivo");
+        }
+
+        try {
+            Path uploadDir = Paths.get(uploadBasePath);
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir);
+            }
+
+            String storedFilename = UUID.randomUUID().toString() + "." + ext;
+            Path destination = uploadDir.resolve(storedFilename).normalize();
+
+            // Double-check path traversal
+            if (!destination.toAbsolutePath().startsWith(uploadDir.toAbsolutePath().normalize())) {
+                throw new IllegalArgumentException("Nombre de archivo inválido");
+            }
+
+            Files.copy(file.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
+            log.info("Saved file: {}", storedFilename);
+            return storedFilename;
+        } catch (IOException e) {
+            log.error("Error saving file");
+            throw new RuntimeException("Error al guardar el archivo");
+        }
+    }
+
+    private void deleteFile(String filename) {
+        try {
+            Path filePath = Paths.get(uploadBasePath).resolve(filename).normalize();
+            Path uploadDir = Paths.get(uploadBasePath).toAbsolutePath().normalize();
+            if (filePath.toAbsolutePath().startsWith(uploadDir)) {
+                Files.deleteIfExists(filePath);
+            }
+        } catch (IOException e) {
+            log.warn("Could not delete file: {}", filename);
+        }
+    }
+
+    private String getExtension(String filename) {
+        int lastDot = filename.lastIndexOf('.');
+        if (lastDot < 0 || lastDot == filename.length() - 1) {
+            return "";
+        }
+        return filename.substring(lastDot + 1);
+    }
+
+    private void checkAccess(Estudio estudio, MedicoPrincipal principal) {
+        if (!principal.isAdmin() && !principal.getMedicoId().equals(estudio.getMedicoId())) {
+            throw new UnauthorizedException("Acceso denegado al estudio");
+        }
+    }
+
+    private EstudioResponse toResponse(Estudio estudio) {
+        return EstudioResponse.builder()
+                .id(estudio.getId())
+                .fecha(estudio.getFecha())
+                .nombre(estudio.getNombre())
+                .observaciones(estudio.getObservaciones())
+                .pacienteId(estudio.getPacienteId())
+                .medicoId(estudio.getMedicoId())
+                .tieneArchivo(estudio.getArchivoPath() != null)
+                .activo(estudio.isActivo())
+                .build();
+    }
+}

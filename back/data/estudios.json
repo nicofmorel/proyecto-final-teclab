@@ -1,0 +1,10 @@
+[ {
+  "id" : "f864a5e1-a70c-4107-bb86-096345d43fd8",
+  "fecha" : "2026-04-23",
+  "nombre" : "Prueba",
+  "observaciones" : "Se ve todo bien",
+  "pacienteId" : "4b72ab03-964c-4777-b410-d9e447f9ff47",
+  "medicoId" : "53bd47bb-e668-4e00-bc2a-c9666fc1c9bf",
+  "archivoPath" : null,
+  "activo" : true
+} ]

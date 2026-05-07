@@ -1,0 +1,53 @@
+# ─── Maven / Java ───────────────────────────────────────────────
+back/target/
+back/*.class
+back/**/*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Maven wrapper cache
+.mvn/wrapper/maven-wrapper.jar
+
+# ─── Logs ───────────────────────────────────────────────────────
+*.log
+logs/
+back/data/*.log
+
+# ─── IDEs ───────────────────────────────────────────────────────
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# NetBeans
+nbactions.xml
+nb-configuration.xml
+
+# ─── OS ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Variables de entorno / secretos ────────────────────────────
+.env
+.env.*
+*.properties.local
+
+# ─── Claude Code ────────────────────────────────────────────────
+.claude/
