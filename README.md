@@ -214,5 +214,5 @@ Los datos de prueba se encuentran en `back/data/medicos.json`. El sistema viene 
 | Institución | TECLAB |
 | Materia | Práctica Profesional |
 | Tipo | Proyecto Final |
-| Alumno | Nicolas Morel |
+| Alumno | Nicolas Fernandez |
 | Año | 2026 |
