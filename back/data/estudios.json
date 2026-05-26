@@ -1,8 +1,17 @@
 [ {
+  "id" : "0f4be226-0784-4cdd-bd77-570ceb263fac",
+  "fecha" : "2026-05-07",
+  "nombre" : "Estudio General",
+  "observaciones" : "Todo se ve correcto.",
+  "pacienteId" : "c3d7cd5d-6cf9-47aa-bbf3-6fb2f7cd34f9",
+  "medicoId" : "1c0ddedc-35da-434b-a6fd-25e7178337a5",
+  "archivoPath" : null,
+  "activo" : true
+}, {
   "id" : "f864a5e1-a70c-4107-bb86-096345d43fd8",
   "fecha" : "2026-04-23",
   "nombre" : "Prueba",
-  "observaciones" : "Se ve todo bien",
+  "observaciones" : "Prueba correcta.",
   "pacienteId" : "4b72ab03-964c-4777-b410-d9e447f9ff47",
   "medicoId" : "53bd47bb-e668-4e00-bc2a-c9666fc1c9bf",
   "archivoPath" : null,

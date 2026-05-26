@@ -1,13 +1,4 @@
 [ {
-  "id" : "8abffe34-31eb-41fe-a99b-bc26f22743c5",
-  "nombre" : "Maria",
-  "apellido" : "Garcia",
-  "fechaNacimiento" : "1990-05-15",
-  "mail" : "maria@example.com",
-  "telefono" : "1234567890",
-  "medicoId" : "1da5b496-95b4-4bf0-b010-667915f6318d",
-  "activo" : true
-}, {
   "id" : "4b72ab03-964c-4777-b410-d9e447f9ff47",
   "nombre" : "Jorge",
   "apellido" : "Cremades",
@@ -16,4 +7,22 @@
   "telefono" : "1148596844",
   "medicoId" : "53bd47bb-e668-4e00-bc2a-c9666fc1c9bf",
   "activo" : true
+}, {
+  "id" : "c3d7cd5d-6cf9-47aa-bbf3-6fb2f7cd34f9",
+  "nombre" : "Juan",
+  "apellido" : "Lopez",
+  "fechaNacimiento" : "1990-02-07",
+  "mail" : "juanlopez45@gmail.com",
+  "telefono" : "1133333333",
+  "medicoId" : "1c0ddedc-35da-434b-a6fd-25e7178337a5",
+  "activo" : true
+}, {
+  "id" : "8abffe34-31eb-41fe-a99b-bc26f22743c5",
+  "nombre" : "Maria",
+  "apellido" : "Garcia",
+  "fechaNacimiento" : "1990-05-15",
+  "mail" : "maria@example.com",
+  "telefono" : "1234567890",
+  "medicoId" : "1da5b496-95b4-4bf0-b010-667915f6318d",
+  "activo" : false
 } ]

@@ -6,9 +6,31 @@
   "matricula" : "ADM001",
   "especialidad" : "Administración",
   "mail" : "admin@medical.com",
-  "password" : "$2a$10$EvWj3fO4JW1Uup0dqTW8quSwN5mBBtVlQQCg8RcC9Iuo4sYB0i0u.",
+  "password" : "$2a$10$FieiCPRAYzqHbbnx2zYth.dy3e1DXaE4PZKps3q6SSQlfKzuMzany",
   "rol" : "ADMIN",
   "activo" : true
+}, {
+  "id" : "1c0ddedc-35da-434b-a6fd-25e7178337a5",
+  "nombre" : "Nicolas",
+  "apellido" : "Fernandez",
+  "documento" : "41111111",
+  "matricula" : "MER189231",
+  "especialidad" : "Medico General",
+  "mail" : "nico@gmail.com",
+  "password" : "$2a$10$zqG2r7K4okhqkK.7EJ6jwOIHWTMWcp8OXQthsnPgxmRxHAt/mMlZy",
+  "rol" : "MEDICO",
+  "activo" : true
+}, {
+  "id" : "53bd47bb-e668-4e00-bc2a-c9666fc1c9bf",
+  "nombre" : "Medico",
+  "apellido" : "Prueba",
+  "documento" : "41334665",
+  "matricula" : "21803912",
+  "especialidad" : "Medico de Cabecera",
+  "mail" : "prueba@gmail.com",
+  "password" : "$2a$10$VU7fSByX6AodVnI.Qii7EerP9/hWXFSv4Mw99ZE6ovzT5glBI/31K",
+  "rol" : "MEDICO",
+  "activo" : false
 }, {
   "id" : "1da5b496-95b4-4bf0-b010-667915f6318d",
   "nombre" : "Juan",
@@ -20,15 +42,4 @@
   "password" : "$2a$10$y0HRk7tPZ7..cVujbynqjeo.ff836JJOaEl.yUYVJyFT33cipFuHe",
   "rol" : "MEDICO",
   "activo" : false
-}, {
-  "id" : "53bd47bb-e668-4e00-bc2a-c9666fc1c9bf",
-  "nombre" : "Medico",
-  "apellido" : "Prueba",
-  "documento" : "41334665",
-  "matricula" : "21803912",
-  "especialidad" : "Medico de Cabecera",
-  "mail" : "prueba@gmail.com",
-  "password" : "$2a$10$VU7fSByX6AodVnI.Qii7EerP9/hWXFSv4Mw99ZE6ovzT5glBI/31K",
-  "rol" : "MEDICO",
-  "activo" : true
 } ]
