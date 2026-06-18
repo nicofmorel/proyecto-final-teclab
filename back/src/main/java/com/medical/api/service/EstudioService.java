@@ -5,6 +5,8 @@ import com.medical.api.dto.EstudioResponse;
 import com.medical.api.exception.ResourceNotFoundException;
 import com.medical.api.exception.UnauthorizedException;
 import com.medical.api.model.Estudio;
+import com.medical.api.model.Medico;
+import com.medical.api.model.Paciente;
 import com.medical.api.model.TipoEstudio;
 import com.medical.api.repository.EstudioRepository;
 import com.medical.api.repository.MedicoRepository;
@@ -13,6 +15,16 @@ import com.medical.api.security.MedicoPrincipal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
+import com.lowagie.text.Font;
+import com.lowagie.text.FontFactory;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
@@ -22,11 +34,14 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.awt.Color;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +62,7 @@ public class EstudioService {
     );
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final DateTimeFormatter PDF_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final Map<TipoEstudio, List<String>> DETAIL_KEYS = Map.of(
             TipoEstudio.RADIOGRAFIA, List.of("regionAnatomica", "lateralidad", "proyeccion", "contraste"),
             TipoEstudio.ECOGRAFIA, List.of("zonaEstudio", "ayuno", "via", "hallazgos"),
@@ -224,6 +240,65 @@ public class EstudioService {
             case "png" -> "image/png";
             default -> "application/octet-stream";
         };
+    }
+
+    public byte[] generatePdf(Long id, MedicoPrincipal principal) {
+        Estudio estudio = estudioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
+
+        checkAccess(estudio, principal);
+
+        Medico medico = medicoRepository.findById(estudio.getMedicoId()).orElse(null);
+        Paciente paciente = pacienteRepository.findById(estudio.getPacienteId()).orElse(null);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            Document document = new Document();
+            PdfWriter.getInstance(document, out);
+            document.open();
+
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.BLACK);
+            Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.BLACK);
+
+            document.add(new Paragraph("Resumen de Estudio", titleFont));
+            document.add(new Paragraph(" "));
+
+            PdfPTable table = new PdfPTable(2);
+            table.setWidthPercentage(100);
+            table.setSpacingBefore(8f);
+            table.setSpacingAfter(8f);
+            addRow(table, "Código", safe(estudio.getCodigoEstudio()));
+            addRow(table, "Fecha", formatDate(estudio.getFecha()));
+            addRow(table, "Nombre", safe(estudio.getNombre()));
+            addRow(table, "Tipo", safe(estudio.getTipoEstudio() != null ? estudio.getTipoEstudio().name() : null));
+            addRow(table, "Complejidad", safe(estudio.getComplejidad() != null ? estudio.getComplejidad().name() : null));
+            addRow(table, "Estado", estudio.isActivo() ? "Activo" : "Inactivo");
+            addRow(table, "Paciente", buildFullName(paciente));
+            addRow(table, "Médico", buildFullName(medico));
+            addRow(table, "Archivo", estudio.getArchivoPath() != null ? estudio.getArchivoPath() : "Sin archivo adjunto");
+            document.add(table);
+
+            document.add(new Paragraph("Observaciones", sectionFont));
+            document.add(new Paragraph(safe(estudio.getObservaciones())));
+            document.add(new Paragraph(" "));
+
+            document.add(new Paragraph("Detalles específicos", sectionFont));
+            PdfPTable detailsTable = new PdfPTable(2);
+            detailsTable.setWidthPercentage(100);
+            detailsTable.setSpacingBefore(6f);
+            JsonNode detailsNode = parseStoredDetalles(estudio.getDetalles());
+            if (detailsNode != null && detailsNode.isObject() && detailsNode.size() > 0) {
+                detailsNode.fields().forEachRemaining(entry -> addRow(detailsTable, humanizeKey(entry.getKey()), safe(entry.getValue().asText())));
+            } else {
+                addRow(detailsTable, "Detalles", "Sin detalles adicionales");
+            }
+            document.add(detailsTable);
+
+            document.close();
+            return out.toByteArray();
+        } catch (DocumentException e) {
+            throw new IllegalStateException("No se pudo generar el PDF del estudio", e);
+        }
     }
 
     private String saveFile(MultipartFile file) {
@@ -458,5 +533,57 @@ public class EstudioService {
         if (value == null || value.asText().isBlank()) {
             throw new IllegalArgumentException("Para " + tipoEstudio.name() + " es requerido " + label);
         }
+    }
+
+    private void addRow(PdfPTable table, String label, String value) {
+        PdfPCell left = new PdfPCell(new Phrase(label, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10)));
+        left.setBackgroundColor(new Color(245, 245, 245));
+        left.setPadding(6f);
+        PdfPCell right = new PdfPCell(new Phrase(value));
+        right.setPadding(6f);
+        table.addCell(left);
+        table.addCell(right);
+    }
+
+    private String buildFullName(Medico medico) {
+        if (medico == null) {
+            return "—";
+        }
+        return safe(medico.getNombre()) + " " + safe(medico.getApellido());
+    }
+
+    private String buildFullName(Paciente paciente) {
+        if (paciente == null) {
+            return "—";
+        }
+        return safe(paciente.getNombre()) + " " + safe(paciente.getApellido());
+    }
+
+    private String formatDate(java.time.LocalDate date) {
+        return date != null ? date.format(PDF_DATE_FORMAT) : "—";
+    }
+
+    private String safe(String value) {
+        return value == null || value.isBlank() ? "—" : value;
+    }
+
+    private String humanizeKey(String key) {
+        return switch (key) {
+            case "regionAnatomica" -> "Región anatómica";
+            case "lateralidad" -> "Lateralidad";
+            case "proyeccion" -> "Proyección";
+            case "contraste" -> "Contraste";
+            case "zonaEstudio" -> "Zona estudiada";
+            case "ayuno" -> "Ayuno previo";
+            case "via" -> "Vía";
+            case "hallazgos" -> "Hallazgos";
+            case "muestra" -> "Muestra";
+            case "panel" -> "Panel";
+            case "prioridad" -> "Prioridad";
+            case "region" -> "Región";
+            case "sedacion" -> "Sedación";
+            case "observacionesTecnicas" -> "Observaciones técnicas";
+            default -> key;
+        };
     }
 }

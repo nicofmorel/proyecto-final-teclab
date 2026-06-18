@@ -76,4 +76,17 @@ public class EstudioController {
                         "inline; filename=\"" + resource.getFilename() + "\"")
                 .body(resource);
     }
+
+    @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportPdf(
+            @PathVariable Long id,
+            @AuthenticationPrincipal MedicoPrincipal principal) {
+        byte[] pdf = estudioService.generatePdf(id, principal);
+        String filename = "estudio-" + id + ".pdf";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(pdf);
+    }
 }

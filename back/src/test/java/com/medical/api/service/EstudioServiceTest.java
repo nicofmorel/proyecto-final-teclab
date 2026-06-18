@@ -3,6 +3,8 @@ package com.medical.api.service;
 import com.medical.api.dto.EstudioRequest;
 import com.medical.api.model.Complejidad;
 import com.medical.api.model.Estudio;
+import com.medical.api.model.Medico;
+import com.medical.api.model.Paciente;
 import com.medical.api.model.TipoEstudio;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.medical.api.repository.EstudioRepository;
@@ -17,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -126,6 +129,36 @@ class EstudioServiceTest {
         assertThatThrownBy(() -> estudioService.create(request, null, principal))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("prioridad");
+    }
+
+    @Test
+    void generatePdfShouldReturnPdfBytes() {
+        MedicoPrincipal principal = new MedicoPrincipal(1L, "admin@demo.com", "ADMIN");
+        Estudio existing = Estudio.builder()
+                .id(99L)
+                .fecha(LocalDate.of(2026, 6, 1))
+                .nombre("Estudio viejo")
+                .observaciones("Viejo")
+                .pacienteId(10L)
+                .medicoId(1L)
+                .codigoEstudio("GEN-ABC12345")
+                .tipoEstudio(TipoEstudio.GENERICO)
+                .complejidad(Complejidad.BAJA)
+                .detalles("{\"nota\":\"ok\"}")
+                .activo(true)
+                .build();
+
+        Medico medico = Medico.builder().nombre("Ana").apellido("Perez").build();
+        Paciente paciente = Paciente.builder().nombre("Luis").apellido("Gomez").build();
+
+        when(estudioRepository.findById(99L)).thenReturn(Optional.of(existing));
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico));
+        when(pacienteRepository.findById(10L)).thenReturn(Optional.of(paciente));
+
+        byte[] pdf = estudioService.generatePdf(99L, principal);
+
+        assertThat(pdf).isNotEmpty();
+        assertThat(new String(pdf, 0, 4, StandardCharsets.US_ASCII)).isEqualTo("%PDF");
     }
 
     private EstudioRequest baseRequest() {

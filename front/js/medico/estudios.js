@@ -98,6 +98,7 @@ const tbody        = document.getElementById('tbody-estudios');
 const detailsContainer = document.getElementById('e-detalles-container');
 const detailArchivoOpen = document.getElementById('d-archivo-open');
 const detailPreview = document.getElementById('d-preview');
+const detailExportPdf = document.getElementById('btn-export-pdf');
 let currentDetailStudyId = null;
 let currentDetailArchivoUrl = null;
 const filterInputs = {
@@ -326,6 +327,20 @@ async function fetchArchivoBlob(id) {
     blob: await res.blob(),
     contentType: res.headers.get('content-type') || '',
   };
+}
+
+async function exportStudyPdf(id) {
+  const res = await apiGetRaw(`/estudios/${id}/pdf`);
+  if (!res) return;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `estudio-${id}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 function parseDetalleValues(raw) {
@@ -686,6 +701,17 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
 if (detailArchivoOpen) {
   detailArchivoOpen.addEventListener('click', () => {
     if (currentDetailStudyId) viewArchivo(currentDetailStudyId);
+  });
+}
+
+if (detailExportPdf) {
+  detailExportPdf.addEventListener('click', async () => {
+    if (!currentDetailStudyId) return;
+    try {
+      await exportStudyPdf(currentDetailStudyId);
+    } catch (err) {
+      showToast(err.message || 'No se pudo exportar el PDF.', 'error');
+    }
   });
 }
 

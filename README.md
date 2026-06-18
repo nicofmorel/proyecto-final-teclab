@@ -83,8 +83,8 @@ proyecto-final-teclab/
 
 **Médico (MEDICO)**
 - Acceso a sus propios pacientes asignados
-- Creación y visualización de estudios para sus pacientes
-- Carga y descarga de archivos adjuntos (PDF, imágenes)
+- Creación, visualización y exportación a PDF de estudios para sus pacientes
+- Carga, descarga y previsualización de archivos adjuntos (PDF, imágenes)
 
 ### Entidades principales
 - **Médico:** datos personales, matrícula, especialidad, rol y estado
@@ -106,6 +106,8 @@ proyecto-final-teclab/
 | GET / POST / PUT / DELETE | `/api/medicos/**` | Gestión de médicos | ADMIN |
 | GET / POST / PUT / DELETE | `/api/pacientes/**` | Gestión de pacientes | ADMIN / MEDICO |
 | GET / POST / PUT / DELETE | `/api/estudios/**` | Gestión de estudios | ADMIN / MEDICO |
+| GET | `/api/estudios/{id}/archivo` | Ver/descargar archivo adjunto | ADMIN / MEDICO |
+| GET | `/api/estudios/{id}/pdf` | Exportar resumen a PDF | ADMIN / MEDICO |
 
 ---
 
@@ -231,7 +233,9 @@ La base se reinicia en cada arranque porque H2 está en memoria.
   "pacienteId": "uuid",
   "medicoId": "uuid",
   "codigoEstudio": "string",
-  "detalles": "string",
+  "detalles": {
+    "clave": "valor"
+  },
   "archivoPath": "string | null",
   "activo": true
 }
