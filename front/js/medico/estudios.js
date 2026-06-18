@@ -280,7 +280,27 @@ function renderDetailValue(value) {
 function renderDetailObject(details) {
   const entries = Object.entries(parseDetalleValues(details));
   if (entries.length === 0) return '—';
-  return entries.map(([key, value]) => `<div><strong>${escapeHtml(key)}:</strong> ${renderDetailValue(value)}</div>`).join('');
+  return entries.map(([key, value]) => `<div><strong>${escapeHtml(humanizeDetailKey(key))}:</strong> ${renderDetailValue(value)}</div>`).join('');
+}
+
+function humanizeDetailKey(key) {
+  const labels = {
+    regionAnatomica: 'Región anatómica',
+    lateralidad: 'Lateralidad',
+    proyeccion: 'Proyección',
+    contraste: 'Contraste',
+    zonaEstudio: 'Zona estudiada',
+    ayuno: 'Ayuno previo',
+    via: 'Vía',
+    hallazgos: 'Hallazgos',
+    muestra: 'Muestra',
+    panel: 'Panel',
+    prioridad: 'Prioridad',
+    region: 'Región',
+    sedacion: 'Sedación',
+    observacionesTecnicas: 'Observaciones técnicas',
+  };
+  return labels[key] || key;
 }
 
 function getArchivoKind(filename, contentType = '') {
