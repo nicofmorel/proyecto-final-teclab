@@ -57,6 +57,28 @@
             <i class="bi bi-plus-lg"></i> Nuevo Estudio
           </button>
         </div>
+        <div class="row g-2 mb-3">
+          <div class="col-md-5">
+            <input type="search" id="filter-q" class="form-control" placeholder="Buscar por nombre, código u observación..." />
+          </div>
+          <div class="col-md-3">
+            <select id="filter-tipo" class="form-select">
+              <option value="">Todos los tipos</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select id="filter-paciente" class="form-select">
+              <option value="">Todos mis pacientes</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select id="filter-activo" class="form-select">
+              <option value="">Activos e inactivos</option>
+              <option value="true">Solo activos</option>
+              <option value="false">Solo inactivos</option>
+            </select>
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="table table-striped mb-0">
             <thead>

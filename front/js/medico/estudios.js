@@ -38,6 +38,12 @@ let pacientes  = [];
 let editingId  = null;
 let deletingId = null;
 const medicoId = getCurrentMedicoId();
+let filterState = {
+  q: '',
+  tipo: '',
+  paciente: '',
+  activo: '',
+};
 
 const ESTUDIO_TIPOS = {
   GENERICO: 'Genérico',
@@ -88,6 +94,12 @@ const confirmModal = new bootstrap.Modal(confirmEl);
 const form         = document.getElementById('form-estudio');
 const tbody        = document.getElementById('tbody-estudios');
 const detailsContainer = document.getElementById('e-detalles-container');
+const filterInputs = {
+  q: document.getElementById('filter-q'),
+  tipo: document.getElementById('filter-tipo'),
+  paciente: document.getElementById('filter-paciente'),
+  activo: document.getElementById('filter-activo'),
+};
 
 /* ── Load ── */
 async function loadData() {
@@ -97,6 +109,7 @@ async function loadData() {
       apiGet('/estudios'),
       apiGet('/pacientes'),
     ]);
+    populateFilterOptions();
     renderTable();
     populateSelects();
     populatePacienteSelect();
@@ -109,19 +122,20 @@ async function loadData() {
 function renderTable() {
   tbody.innerHTML = '';
   const myEstudios = Array.isArray(estudios) ? estudios : [];
+  const visibleEstudios = getFilteredEstudios(myEstudios);
 
-  if (myEstudios.length === 0) {
+  if (visibleEstudios.length === 0) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
     td.colSpan = 9;
     td.className = 'text-center py-4 text-muted';
-    td.textContent = 'No tiene estudios registrados.';
+    td.textContent = myEstudios.length ? 'No hay estudios que coincidan con los filtros.' : 'No tiene estudios registrados.';
     tr.appendChild(td);
     tbody.appendChild(tr);
     return;
   }
 
-  myEstudios.forEach(e => {
+  visibleEstudios.forEach(e => {
     const tr = document.createElement('tr');
     const isActivo = e.activo !== false;
 
@@ -312,6 +326,65 @@ function populateSelects() {
     });
   }
 
+  function populateFilterOptions() {
+    const selectedTipo = filterState.tipo;
+    const selectedPaciente = filterState.paciente;
+    const typeSelect = filterInputs.tipo;
+    const patientSelect = filterInputs.paciente;
+
+    if (typeSelect) {
+      typeSelect.innerHTML = '<option value="">Todos los tipos</option>';
+      Object.entries(ESTUDIO_TIPOS).forEach(([value, label]) => {
+        typeSelect.appendChild(new Option(label, value));
+      });
+    }
+
+    if (patientSelect) {
+      patientSelect.innerHTML = '<option value="">Todos mis pacientes</option>';
+      (pacientes || []).filter(p => {
+        const pMedId = p.medicoId || p.medico?.id;
+        return p.activo !== false && String(pMedId) === String(medicoId);
+      }).forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.nombre || ''} ${p.apellido || ''}`.trim();
+        patientSelect.appendChild(opt);
+      });
+    }
+
+    if (typeSelect) typeSelect.value = selectedTipo;
+    if (patientSelect) patientSelect.value = selectedPaciente;
+  }
+
+  function getFilteredEstudios(list) {
+    const q = filterState.q.trim().toLowerCase();
+    return list.filter((e) => {
+      if (filterState.tipo && String(e.tipoEstudio || '') !== String(filterState.tipo)) return false;
+      if (filterState.paciente && String(e.pacienteId || '') !== String(filterState.paciente)) return false;
+      if (filterState.activo !== '' && String(e.activo) !== String(filterState.activo)) return false;
+      if (!q) return true;
+
+      const haystack = [
+        e.nombre,
+        e.codigoEstudio,
+        e.observaciones,
+        e.tipoEstudio,
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      return haystack.includes(q);
+    });
+  }
+
+  function syncFiltersFromUI() {
+    filterState = {
+      q: filterInputs.q?.value || '',
+      tipo: filterInputs.tipo?.value || '',
+      paciente: filterInputs.paciente?.value || '',
+      activo: filterInputs.activo?.value || '',
+    };
+    renderTable();
+  }
+
   if (selComp) {
     selComp.innerHTML = '';
     Object.entries(ESTUDIO_COMPLEJIDADES).forEach(([value, label]) => {
@@ -488,6 +561,11 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
 /* ── Init ── */
 document.getElementById('e-tipoEstudio').addEventListener('change', (event) => {
   renderDetailFields(event.target.value);
+});
+Object.values(filterInputs).forEach((input) => {
+  if (!input) return;
+  const eventName = input.tagName === 'INPUT' ? 'input' : 'change';
+  input.addEventListener(eventName, syncFiltersFromUI);
 });
 document.getElementById('btn-nuevo-estudio').addEventListener('click', openCreate);
 renderDetailFields('GENERICO');
