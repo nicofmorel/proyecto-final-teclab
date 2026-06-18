@@ -89,8 +89,10 @@ const ESTUDIO_DETALLES = {
 
 const modalEl      = document.getElementById('modal-estudio');
 const confirmEl    = document.getElementById('modal-confirm');
+const detailEl     = document.getElementById('modal-detalle');
 const modal        = new bootstrap.Modal(modalEl);
 const confirmModal = new bootstrap.Modal(confirmEl);
+const detailModal  = new bootstrap.Modal(detailEl);
 const form         = document.getElementById('form-estudio');
 const tbody        = document.getElementById('tbody-estudios');
 const detailsContainer = document.getElementById('e-detalles-container');
@@ -200,6 +202,12 @@ function renderTable() {
     btnEdit.innerHTML = '<i class="bi bi-pencil"></i>';
     btnEdit.addEventListener('click', () => openEdit(e));
 
+    const btnDetail = document.createElement('button');
+    btnDetail.className = 'btn-action btn btn-outline-secondary me-1';
+    btnDetail.title = 'Ver detalle';
+    btnDetail.innerHTML = '<i class="bi bi-eye"></i>';
+    btnDetail.addEventListener('click', () => openDetail(e.id));
+
     const btnDel = document.createElement('button');
     btnDel.className = 'btn-action btn btn-outline-danger';
     btnDel.title = isActivo ? 'Dar de baja' : 'Ya inactivo';
@@ -208,6 +216,7 @@ function renderTable() {
     btnDel.addEventListener('click', () => openConfirmDelete(e));
 
     tdAcc.appendChild(btnEdit);
+    tdAcc.appendChild(btnDetail);
     tdAcc.appendChild(btnDel);
     tr.appendChild(tdAcc);
 
@@ -237,6 +246,17 @@ function formatDate(dateStr) {
 
 function formatStudyType(type) {
   return ESTUDIO_TIPOS[type] || ESTUDIO_TIPOS.GENERICO;
+}
+
+function renderDetailValue(value) {
+  if (value == null || value === '') return '—';
+  return escapeHtml(String(value));
+}
+
+function renderDetailObject(details) {
+  const entries = Object.entries(parseDetalleValues(details));
+  if (entries.length === 0) return '—';
+  return entries.map(([key, value]) => `<div><strong>${escapeHtml(key)}:</strong> ${renderDetailValue(value)}</div>`).join('');
 }
 
 function parseDetalleValues(raw) {
@@ -312,6 +332,25 @@ function collectDetailValues() {
     }
   });
   return data;
+}
+
+async function openDetail(id) {
+  try {
+    const estudio = await apiGet(`/estudios/${id}`);
+    document.getElementById('d-fecha').textContent = formatDate(estudio.fecha);
+    document.getElementById('d-codigo').textContent = estudio.codigoEstudio || '—';
+    document.getElementById('d-tipo').textContent = formatStudyType(estudio.tipoEstudio);
+    document.getElementById('d-complejidad').textContent = ESTUDIO_COMPLEJIDADES[estudio.complejidad] || '—';
+    document.getElementById('d-nombre').textContent = estudio.nombre || '—';
+    document.getElementById('d-estado').textContent = estudio.activo === false ? 'Inactivo' : 'Activo';
+    document.getElementById('d-paciente').textContent = `${estudio.paciente?.nombre || ''} ${estudio.paciente?.apellido || ''}`.trim() || '—';
+    document.getElementById('d-observaciones').innerHTML = renderDetailValue(estudio.observaciones);
+    document.getElementById('d-detalles').innerHTML = renderDetailObject(estudio.detalles);
+    document.getElementById('d-archivo').textContent = estudio.archivoPath ? estudio.archivoPath.split('/').pop() : 'Sin archivo adjunto';
+    detailModal.show();
+  } catch (err) {
+    showToast(err.message || 'No se pudo cargar el detalle.', 'error');
+  }
 }
 
 /* ── Paciente select (only this medico's patients) ── */
