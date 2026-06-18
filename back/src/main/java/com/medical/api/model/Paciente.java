@@ -1,6 +1,7 @@
 package com.medical.api.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,9 +13,13 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
+@Table(name = "pacientes")
 public class Paciente {
 
-    private String id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String nombre;
     private String apellido;
 
@@ -23,6 +28,6 @@ public class Paciente {
 
     private String mail;
     private String telefono;
-    private String medicoId;
+    private Long medicoId;
     private boolean activo;
 }

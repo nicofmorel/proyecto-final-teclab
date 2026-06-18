@@ -37,7 +37,7 @@ public class PacienteService {
                 .collect(Collectors.toList());
     }
 
-    public PacienteResponse findById(String id, MedicoPrincipal principal) {
+    public PacienteResponse findById(Long id, MedicoPrincipal principal) {
         Paciente paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
 
@@ -47,12 +47,12 @@ public class PacienteService {
     }
 
     public PacienteResponse create(PacienteRequest request, MedicoPrincipal principal) {
-        String medicoId;
+        Long medicoId;
         if (principal.isAdmin()) {
-            if (request.getMedicoId() == null || request.getMedicoId().isBlank()) {
+            if (request.getMedicoId() == null) {
                 throw new IllegalArgumentException("El medicoId es requerido para ADMIN");
             }
-            medicoId = request.getMedicoId();
+            medicoId = Long.valueOf(request.getMedicoId());
             medicoRepository.findById(medicoId)
                     .orElseThrow(() -> new ResourceNotFoundException("Médico no encontrado"));
         } else {
@@ -60,7 +60,6 @@ public class PacienteService {
         }
 
         Paciente paciente = Paciente.builder()
-                .id(UUID.randomUUID().toString())
                 .nombre(request.getNombre())
                 .apellido(request.getApellido())
                 .fechaNacimiento(request.getFechaNacimiento())
@@ -75,7 +74,7 @@ public class PacienteService {
         return toResponse(paciente);
     }
 
-    public PacienteResponse update(String id, PacienteRequest request, MedicoPrincipal principal) {
+    public PacienteResponse update(Long id, PacienteRequest request, MedicoPrincipal principal) {
         Paciente paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
 
@@ -88,10 +87,11 @@ public class PacienteService {
         paciente.setTelefono(request.getTelefono());
 
         // ADMIN can reassign medicoId
-        if (principal.isAdmin() && request.getMedicoId() != null && !request.getMedicoId().isBlank()) {
-            medicoRepository.findById(request.getMedicoId())
+        if (principal.isAdmin() && request.getMedicoId() != null) {
+            Long newMedicoId = Long.valueOf(request.getMedicoId());
+            medicoRepository.findById(newMedicoId)
                     .orElseThrow(() -> new ResourceNotFoundException("Médico no encontrado"));
-            paciente.setMedicoId(request.getMedicoId());
+            paciente.setMedicoId(newMedicoId);
         }
 
         pacienteRepository.save(paciente);
@@ -99,7 +99,7 @@ public class PacienteService {
         return toResponse(paciente);
     }
 
-    public void delete(String id, MedicoPrincipal principal) {
+    public void delete(Long id, MedicoPrincipal principal) {
         Paciente paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
 
@@ -118,13 +118,13 @@ public class PacienteService {
 
     private PacienteResponse toResponse(Paciente paciente) {
         return PacienteResponse.builder()
-                .id(paciente.getId())
+                .id(paciente.getId().toString())
                 .nombre(paciente.getNombre())
                 .apellido(paciente.getApellido())
                 .fechaNacimiento(paciente.getFechaNacimiento())
                 .mail(paciente.getMail())
                 .telefono(paciente.getTelefono())
-                .medicoId(paciente.getMedicoId())
+                .medicoId(paciente.getMedicoId().toString())
                 .activo(paciente.isActivo())
                 .build();
     }

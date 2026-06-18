@@ -27,4 +27,16 @@ public class EstudioRequest {
 
     // Only used by ADMIN; ignored for MEDICO role (set from JWT)
     private String medicoId;
+
+    @NotNull(message = "El tipo de estudio es requerido")
+    private String tipoEstudio;
+
+    @NotNull(message = "La complejidad es requerida")
+    private String complejidad;
+
+    @Size(max = 100, message = "El código de estudio no puede exceder 100 caracteres")
+    private String codigoEstudio;
+
+    @Size(max = 4000, message = "Los detalles no pueden exceder 4000 caracteres")
+    private String detalles;
 }

@@ -32,10 +32,10 @@ public class AuthService {
             throw new BadCredentialsException("Credenciales inválidas");
         }
 
-        String token = jwtUtil.generateToken(medico.getId(), medico.getMail(), medico.getRol().name());
+        String token = jwtUtil.generateToken(medico.getId().toString(), medico.getMail(), medico.getRol().name());
 
         log.info("Successful login for user with rol: {}", medico.getRol().name());
 
-        return new LoginResponse(token, medico.getId(), medico.getMail(), medico.getRol().name());
+        return new LoginResponse(token, medico.getId().toString(), medico.getMail(), medico.getRol().name());
     }
 }

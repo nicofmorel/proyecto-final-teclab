@@ -7,7 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class MedicoPrincipal {
 
-    private final String medicoId;
+    private final Long medicoId;
     private final String mail;
     private final String rol;
 

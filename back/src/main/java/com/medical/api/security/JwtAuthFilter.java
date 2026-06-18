@@ -49,7 +49,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             new SimpleGrantedAuthority("ROLE_" + rol)
                     );
 
-                    MedicoPrincipal principal = new MedicoPrincipal(medicoId, mail, rol);
+                    MedicoPrincipal principal = new MedicoPrincipal(Long.valueOf(medicoId), mail, rol);
 
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(principal, null, authorities);

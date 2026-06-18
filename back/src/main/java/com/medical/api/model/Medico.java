@@ -1,5 +1,6 @@
 package com.medical.api.model;
 
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,9 +10,13 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
+@Table(name = "medicos")
 public class Medico {
 
-    private String id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String nombre;
     private String apellido;
     private String documento;
@@ -19,6 +24,7 @@ public class Medico {
     private String especialidad;
     private String mail;
     private String password;
+    @Enumerated(EnumType.STRING)
     private Rol rol;
     private boolean activo;
 }

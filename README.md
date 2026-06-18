@@ -36,7 +36,7 @@ El sistema fue desarrollado como proyecto final de la materia **Práctica Profes
 | Bootstrap Icons | 1.11.3 |
 
 ### Persistencia
-- Archivos JSON (sin base de datos relacional)
+- H2 en memoria con JPA
 
 ---
 
@@ -48,13 +48,12 @@ proyecto-final-teclab/
 │   ├── src/main/java/com/medical/api/
 │   │   ├── controller/            # Endpoints REST
 │   │   ├── service/               # Lógica de negocio
-│   │   ├── repository/            # Persistencia JSON
+│   │   ├── repository/            # Repositorios JPA
 │   │   ├── model/                 # Entidades del dominio
 │   │   ├── dto/                   # Objetos de transferencia
 │   │   ├── security/              # JWT y filtros de seguridad
-│   │   ├── config/                # Configuración Spring Security
+│   │   ├── config/                # Configuración Spring Security y seed de H2
 │   │   └── exception/             # Manejo global de errores
-│   ├── data/                      # Datos JSON (médicos, pacientes, estudios)
 │   └── pom.xml
 │
 └── front/                         # Frontend - HTML/JS/CSS
@@ -90,7 +89,7 @@ proyecto-final-teclab/
 ### Entidades principales
 - **Médico:** datos personales, matrícula, especialidad, rol y estado
 - **Paciente:** datos personales, fecha de nacimiento, médico asignado
-- **Estudio:** fecha, nombre, observaciones, paciente, médico y archivo adjunto
+- **Estudio:** fecha, nombre, tipo, complejidad, observaciones, paciente, médico, código, detalles y archivo adjunto
 
 ### Carga de archivos
 - Soporte para adjuntar documentos médicos (PDF, imágenes, etc.)
@@ -115,6 +114,7 @@ proyecto-final-teclab/
 ### Requisitos previos
 - Java 21 o superior
 - Maven 3.x
+- Python 3.x para servir el frontend en local
 
 ### Pasos para ejecutar el backend
 
@@ -127,7 +127,26 @@ El servidor inicia en `http://localhost:8080`.
 
 ### Pasos para ejecutar el frontend
 
-Abrir el archivo `front/index.html` directamente en el navegador, o servir la carpeta `front/` con un servidor estático (por ejemplo, Live Server de VS Code).
+No abrir `front/index.html` directamente con `file://` porque las llamadas a la API fallan por CORS/origen.
+
+La forma recomendada es servir la carpeta `front/`:
+
+```bash
+cd front
+python3 -m http.server 3000
+```
+
+Luego abrir `http://localhost:3000`.
+
+### Levantar backend y frontend juntos
+
+Desde la raíz del proyecto:
+
+```bash
+bash scripts/dev.sh
+```
+
+El script inicia el backend en `http://localhost:8080` y el frontend en `http://localhost:3000`.
 
 ### Variables de configuración (`application.properties`)
 
@@ -146,7 +165,16 @@ app.upload.max-size=10485760
 
 ## Credenciales de prueba
 
-Los datos de prueba se encuentran en `back/data/medicos.json`. El sistema viene con un usuario administrador y médicos de ejemplo precargados.
+Los datos de prueba se cargan automáticamente en H2 al iniciar la aplicación.
+
+| Email | Contraseña | Rol | Estado |
+|---|---|---|---|
+| `admin@medical.com` | `Admin2026!` | ADMIN | Activo |
+| `nico@gmail.com` | `Nico2026!` | MEDICO | Activo |
+| `prueba@gmail.com` | `Prueba2026!` | MEDICO | Inactivo |
+| `juan@medical.com` | `Juan2026!` | MEDICO | Inactivo |
+
+La base se reinicia en cada arranque porque H2 está en memoria.
 
 ---
 
@@ -197,9 +225,13 @@ Los datos de prueba se encuentran en `back/data/medicos.json`. El sistema viene 
   "id": "uuid",
   "fecha": "YYYY-MM-DD",
   "nombre": "string",
+  "tipoEstudio": "GENERICO | RADIOGRAFIA | ECOGRAFIA | LABORATORIO | TOMOGRAFIA",
+  "complejidad": "BAJA | MEDIA | ALTA",
   "observaciones": "string",
   "pacienteId": "uuid",
   "medicoId": "uuid",
+  "codigoEstudio": "string",
+  "detalles": "string",
   "archivoPath": "string | null",
   "activo": true
 }

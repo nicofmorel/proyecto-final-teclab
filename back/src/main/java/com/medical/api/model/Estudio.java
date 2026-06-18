@@ -1,6 +1,7 @@
 package com.medical.api.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,17 +13,32 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
+@Table(name = "estudios")
 public class Estudio {
 
-    private String id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate fecha;
 
     private String nombre;
     private String observaciones;
-    private String pacienteId;
-    private String medicoId;
+    private Long pacienteId;
+    private Long medicoId;
     private String archivoPath;
     private boolean activo;
+
+    @Enumerated(EnumType.STRING)
+    private TipoEstudio tipoEstudio;
+
+    @Enumerated(EnumType.STRING)
+    private Complejidad complejidad;
+
+    private String codigoEstudio;
+
+    @Lob
+    private String detalles;
 }

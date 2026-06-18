@@ -64,6 +64,7 @@
               <tr>
                 <th>Fecha</th>
                 <th>Nombre del Estudio</th>
+                <th>Tipo</th>
                 <th>Paciente</th>
                 <th>Médico</th>
                 <th>Observaciones</th>
@@ -73,7 +74,7 @@
               </tr>
             </thead>
             <tbody id="tbody-estudios">
-              <tr class="loading-row"><td colspan="8"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando…</td></tr>
+              <tr class="loading-row"><td colspan="9"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando…</td></tr>
             </tbody>
           </table>
         </div>
@@ -104,6 +105,26 @@
               <div class="invalid-feedback">Ingrese el nombre del estudio.</div>
             </div>
             <div class="col-md-6">
+              <label class="form-label" for="e-tipoEstudio">Tipo de estudio <span class="text-danger">*</span></label>
+              <select id="e-tipoEstudio" class="form-select" required>
+                <option value="GENERICO">Genérico</option>
+                <option value="RADIOGRAFIA">Radiografía</option>
+                <option value="ECOGRAFIA">Ecografía</option>
+                <option value="LABORATORIO">Laboratorio</option>
+                <option value="TOMOGRAFIA">Tomografía</option>
+              </select>
+              <div class="invalid-feedback">Seleccione un tipo de estudio.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="e-complejidad">Complejidad <span class="text-danger">*</span></label>
+              <select id="e-complejidad" class="form-select" required>
+                <option value="BAJA">Baja</option>
+                <option value="MEDIA">Media</option>
+                <option value="ALTA">Alta</option>
+              </select>
+              <div class="invalid-feedback">Seleccione la complejidad.</div>
+            </div>
+            <div class="col-md-6">
               <label class="form-label" for="e-pacienteId">Paciente <span class="text-danger">*</span></label>
               <select id="e-pacienteId" class="form-select" required>
                 <option value="">Cargando pacientes…</option>
@@ -120,6 +141,11 @@
             <div class="col-12">
               <label class="form-label" for="e-observaciones">Observaciones</label>
               <textarea id="e-observaciones" class="form-control" rows="3" maxlength="1000"></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Detalles específicos</label>
+              <div id="e-detalles-container" class="border rounded p-3 bg-light"></div>
+              <div class="form-text">Se ajusta según el tipo de estudio seleccionado.</div>
             </div>
             <div class="col-12" id="e-archivo-group">
               <label class="form-label" for="e-archivo">Archivo (PDF, JPG, PNG)</label>

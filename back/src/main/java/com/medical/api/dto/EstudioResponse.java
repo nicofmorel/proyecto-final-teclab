@@ -23,6 +23,10 @@ public class EstudioResponse {
     private String observaciones;
     private String pacienteId;
     private String medicoId;
+    private String tipoEstudio;
+    private String complejidad;
+    private String codigoEstudio;
+    private String detalles;
     private boolean tieneArchivo;
     private boolean activo;
 }

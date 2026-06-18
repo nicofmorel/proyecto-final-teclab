@@ -39,25 +39,69 @@ let editingId  = null;
 let deletingId = null;
 const medicoId = getCurrentMedicoId();
 
+const ESTUDIO_TIPOS = {
+  GENERICO: 'Genérico',
+  RADIOGRAFIA: 'Radiografía',
+  ECOGRAFIA: 'Ecografía',
+  LABORATORIO: 'Laboratorio',
+  TOMOGRAFIA: 'Tomografía',
+};
+
+const ESTUDIO_COMPLEJIDADES = {
+  BAJA: 'Baja',
+  MEDIA: 'Media',
+  ALTA: 'Alta',
+};
+
+const ESTUDIO_DETALLES = {
+  GENERICO: [],
+  RADIOGRAFIA: [
+    { key: 'regionAnatomica', label: 'Región anatómica', type: 'text', placeholder: 'Ej. Tórax' },
+    { key: 'lateralidad', label: 'Lateralidad', type: 'select', options: ['Izquierda', 'Derecha', 'Bilateral'] },
+    { key: 'proyeccion', label: 'Proyección', type: 'text', placeholder: 'Ej. Frontal y lateral' },
+    { key: 'contraste', label: 'Con contraste', type: 'select', options: ['No', 'Sí'] },
+  ],
+  ECOGRAFIA: [
+    { key: 'zonaEstudio', label: 'Zona estudiada', type: 'text', placeholder: 'Ej. Abdomen superior' },
+    { key: 'ayuno', label: 'Ayuno previo', type: 'select', options: ['No', 'Sí'] },
+    { key: 'via', label: 'Vía de estudio', type: 'select', options: ['Abdominal', 'Transvaginal', 'Partes blandas'] },
+    { key: 'hallazgos', label: 'Hallazgos', type: 'textarea', placeholder: 'Breve descripción de hallazgos' },
+  ],
+  LABORATORIO: [
+    { key: 'muestra', label: 'Tipo de muestra', type: 'select', options: ['Sangre', 'Orina', 'Heces', 'Hisopado'] },
+    { key: 'panel', label: 'Panel / análisis', type: 'text', placeholder: 'Ej. Hemograma completo' },
+    { key: 'ayuno', label: 'Ayuno previo', type: 'select', options: ['No', 'Sí'] },
+    { key: 'prioridad', label: 'Prioridad', type: 'select', options: ['Rutina', 'Urgente'] },
+  ],
+  TOMOGRAFIA: [
+    { key: 'region', label: 'Región estudiada', type: 'text', placeholder: 'Ej. Cráneo' },
+    { key: 'contraste', label: 'Con contraste', type: 'select', options: ['No', 'Sí'] },
+    { key: 'sedacion', label: 'Sedación', type: 'select', options: ['No', 'Sí'] },
+    { key: 'observacionesTecnicas', label: 'Observaciones técnicas', type: 'textarea', placeholder: 'Ej. Cortes axiales sin incidencias' },
+  ],
+};
+
 const modalEl      = document.getElementById('modal-estudio');
 const confirmEl    = document.getElementById('modal-confirm');
 const modal        = new bootstrap.Modal(modalEl);
 const confirmModal = new bootstrap.Modal(confirmEl);
 const form         = document.getElementById('form-estudio');
 const tbody        = document.getElementById('tbody-estudios');
+const detailsContainer = document.getElementById('e-detalles-container');
 
 /* ── Load ── */
 async function loadData() {
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="7"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando…</td></tr>';
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="8"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando…</td></tr>';
   try {
     [estudios, pacientes] = await Promise.all([
       apiGet('/estudios'),
       apiGet('/pacientes'),
     ]);
     renderTable();
+    populateSelects();
     populatePacienteSelect();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3"><i class="bi bi-exclamation-triangle me-2"></i>${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-3"><i class="bi bi-exclamation-triangle me-2"></i>${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -69,7 +113,7 @@ function renderTable() {
   if (myEstudios.length === 0) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 7;
+    td.colSpan = 8;
     td.className = 'text-center py-4 text-muted';
     td.textContent = 'No tiene estudios registrados.';
     tr.appendChild(td);
@@ -93,6 +137,7 @@ function renderTable() {
 
     tr.appendChild(tdText(formatDate(e.fecha)));
     tr.appendChild(tdText(e.nombre || '—'));
+    tr.appendChild(tdText(formatStudyType(e.tipoEstudio)));
     tr.appendChild(tdText(pacNombre));
 
     // Observaciones truncated
@@ -175,7 +220,104 @@ function formatDate(dateStr) {
   } catch { return dateStr; }
 }
 
+function formatStudyType(type) {
+  return ESTUDIO_TIPOS[type] || ESTUDIO_TIPOS.GENERICO;
+}
+
+function parseDetalleValues(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function renderDetailFields(tipo, values = {}) {
+  detailsContainer.innerHTML = '';
+  const schema = ESTUDIO_DETALLES[tipo] || [];
+
+  if (schema.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'text-muted small';
+    empty.textContent = 'El estudio genérico no requiere campos adicionales.';
+    detailsContainer.appendChild(empty);
+    return;
+  }
+
+  const row = document.createElement('div');
+  row.className = 'row g-3';
+
+  schema.forEach((field) => {
+    const col = document.createElement('div');
+    col.className = field.type === 'textarea' ? 'col-12' : 'col-md-6';
+
+    const label = document.createElement('label');
+    label.className = 'form-label';
+    label.textContent = field.label;
+
+    let input;
+    if (field.type === 'textarea') {
+      input = document.createElement('textarea');
+      input.rows = 3;
+    } else if (field.type === 'select') {
+      input = document.createElement('select');
+      input.appendChild(new Option('Seleccionar…', ''));
+      field.options.forEach((option) => {
+        input.appendChild(new Option(option, option));
+      });
+    } else {
+      input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = field.placeholder || '';
+    }
+
+    input.className = 'form-control';
+    input.dataset.detailKey = field.key;
+    if (values[field.key] != null && values[field.key] !== '') {
+      input.value = values[field.key];
+    }
+
+    col.appendChild(label);
+    col.appendChild(input);
+    row.appendChild(col);
+  });
+
+  detailsContainer.appendChild(row);
+}
+
+function collectDetailValues() {
+  const data = {};
+  detailsContainer.querySelectorAll('[data-detail-key]').forEach((input) => {
+    const value = input.value.trim();
+    if (value) {
+      data[input.dataset.detailKey] = value;
+    }
+  });
+  return data;
+}
+
 /* ── Paciente select (only this medico's patients) ── */
+function populateSelects() {
+  const selTipo = document.getElementById('e-tipoEstudio');
+  const selComp = document.getElementById('e-complejidad');
+
+  if (selTipo) {
+    selTipo.innerHTML = '';
+    Object.entries(ESTUDIO_TIPOS).forEach(([value, label]) => {
+      selTipo.appendChild(new Option(label, value));
+    });
+  }
+
+  if (selComp) {
+    selComp.innerHTML = '';
+    Object.entries(ESTUDIO_COMPLEJIDADES).forEach(([value, label]) => {
+      selComp.appendChild(new Option(label, value));
+    });
+  }
+}
+
 function populatePacienteSelect() {
   const sel = document.getElementById('e-pacienteId');
   sel.innerHTML = '';
@@ -222,6 +364,9 @@ function openCreate() {
 
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('e-fecha').value = today;
+  document.getElementById('e-tipoEstudio').value = 'GENERICO';
+  document.getElementById('e-complejidad').value = 'BAJA';
+  renderDetailFields('GENERICO');
 
   modal.show();
 }
@@ -235,6 +380,9 @@ function openEdit(e) {
   document.getElementById('e-fecha').value         = e.fecha ? e.fecha.split('T')[0] : '';
   document.getElementById('e-nombre').value        = e.nombre        || '';
   document.getElementById('e-observaciones').value = e.observaciones || '';
+  document.getElementById('e-tipoEstudio').value   = e.tipoEstudio || 'GENERICO';
+  document.getElementById('e-complejidad').value   = e.complejidad || 'BAJA';
+  renderDetailFields(document.getElementById('e-tipoEstudio').value, parseDetalleValues(e.detalles));
 
   const pId = e.pacienteId || e.paciente?.id;
   if (pId) document.getElementById('e-pacienteId').value = pId;
@@ -280,12 +428,16 @@ form.addEventListener('submit', async (e) => {
   setSaveLoading(true);
   try {
     const fd = new FormData();
+    const detalleValues = collectDetailValues();
     const estudioData = {
       fecha:         document.getElementById('e-fecha').value,
       nombre:        document.getElementById('e-nombre').value.trim(),
       observaciones: document.getElementById('e-observaciones').value.trim(),
       pacienteId:    document.getElementById('e-pacienteId').value,
       medicoId:      medicoId,
+      tipoEstudio:   document.getElementById('e-tipoEstudio').value,
+      complejidad:   document.getElementById('e-complejidad').value,
+      detalles:      Object.keys(detalleValues).length ? JSON.stringify(detalleValues) : null,
     };
     fd.append('estudio', new Blob([JSON.stringify(estudioData)], { type: 'application/json' }));
     if (hasFile) fd.append('archivo', archivoInput.files[0]);
@@ -330,5 +482,9 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
 });
 
 /* ── Init ── */
+document.getElementById('e-tipoEstudio').addEventListener('change', (event) => {
+  renderDetailFields(event.target.value);
+});
 document.getElementById('btn-nuevo-estudio').addEventListener('click', openCreate);
+renderDetailFields('GENERICO');
 loadData();

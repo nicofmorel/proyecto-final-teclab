@@ -28,7 +28,7 @@ public class PacienteController {
 
     @GetMapping("/{id}")
     public ResponseEntity<PacienteResponse> findById(
-            @PathVariable String id,
+            @PathVariable Long id,
             @AuthenticationPrincipal MedicoPrincipal principal) {
         return ResponseEntity.ok(pacienteService.findById(id, principal));
     }
@@ -43,7 +43,7 @@ public class PacienteController {
 
     @PutMapping("/{id}")
     public ResponseEntity<PacienteResponse> update(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody PacienteRequest request,
             @AuthenticationPrincipal MedicoPrincipal principal) {
         return ResponseEntity.ok(pacienteService.update(id, request, principal));
@@ -51,7 +51,7 @@ public class PacienteController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
-            @PathVariable String id,
+            @PathVariable Long id,
             @AuthenticationPrincipal MedicoPrincipal principal) {
         pacienteService.delete(id, principal);
         return ResponseEntity.noContent().build();

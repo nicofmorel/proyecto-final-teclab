@@ -5,6 +5,7 @@ import com.medical.api.dto.EstudioResponse;
 import com.medical.api.exception.ResourceNotFoundException;
 import com.medical.api.exception.UnauthorizedException;
 import com.medical.api.model.Estudio;
+import com.medical.api.model.TipoEstudio;
 import com.medical.api.repository.EstudioRepository;
 import com.medical.api.repository.MedicoRepository;
 import com.medical.api.repository.PacienteRepository;
@@ -62,7 +63,7 @@ public class EstudioService {
                 .collect(Collectors.toList());
     }
 
-    public EstudioResponse findById(String id, MedicoPrincipal principal) {
+    public EstudioResponse findById(Long id, MedicoPrincipal principal) {
         Estudio estudio = estudioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
 
@@ -71,19 +72,20 @@ public class EstudioService {
     }
 
     public EstudioResponse create(EstudioRequest request, MultipartFile file, MedicoPrincipal principal) {
-        String medicoId;
+        TipoEstudio tipoEstudio = parseTipoEstudio(request.getTipoEstudio());
+        Long medicoId;
         if (principal.isAdmin()) {
-            if (request.getMedicoId() == null || request.getMedicoId().isBlank()) {
+            if (request.getMedicoId() == null) {
                 throw new IllegalArgumentException("El medicoId es requerido para ADMIN");
             }
-            medicoId = request.getMedicoId();
+            medicoId = Long.valueOf(request.getMedicoId());
             medicoRepository.findById(medicoId)
                     .orElseThrow(() -> new ResourceNotFoundException("Médico no encontrado"));
         } else {
             medicoId = principal.getMedicoId();
         }
 
-        pacienteRepository.findById(request.getPacienteId())
+        pacienteRepository.findById(Long.valueOf(request.getPacienteId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
 
         String archivoPath = null;
@@ -91,14 +93,19 @@ public class EstudioService {
             archivoPath = saveFile(file);
         }
 
+        String codigoEstudio = resolveCodigoEstudioForCreate(request.getCodigoEstudio(), tipoEstudio);
+
         Estudio estudio = Estudio.builder()
-                .id(UUID.randomUUID().toString())
                 .fecha(request.getFecha())
                 .nombre(request.getNombre())
                 .observaciones(request.getObservaciones())
-                .pacienteId(request.getPacienteId())
+                .pacienteId(Long.valueOf(request.getPacienteId()))
                 .medicoId(medicoId)
                 .archivoPath(archivoPath)
+                .tipoEstudio(tipoEstudio)
+                .complejidad(parseComplejidad(request.getComplejidad()))
+                .codigoEstudio(codigoEstudio)
+                .detalles(request.getDetalles())
                 .activo(true)
                 .build();
 
@@ -107,25 +114,33 @@ public class EstudioService {
         return toResponse(estudio);
     }
 
-    public EstudioResponse update(String id, EstudioRequest request, MultipartFile file, MedicoPrincipal principal) {
+    public EstudioResponse update(Long id, EstudioRequest request, MultipartFile file, MedicoPrincipal principal) {
         Estudio estudio = estudioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
 
         checkAccess(estudio, principal);
+        TipoEstudio tipoEstudio = parseTipoEstudio(request.getTipoEstudio());
 
-        pacienteRepository.findById(request.getPacienteId())
+        pacienteRepository.findById(Long.valueOf(request.getPacienteId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
 
         estudio.setFecha(request.getFecha());
         estudio.setNombre(request.getNombre());
         estudio.setObservaciones(request.getObservaciones());
-        estudio.setPacienteId(request.getPacienteId());
+        estudio.setPacienteId(Long.valueOf(request.getPacienteId()));
+        estudio.setTipoEstudio(tipoEstudio);
+        estudio.setComplejidad(parseComplejidad(request.getComplejidad()));
+        estudio.setDetalles(request.getDetalles());
 
-        if (principal.isAdmin() && request.getMedicoId() != null && !request.getMedicoId().isBlank()) {
-            medicoRepository.findById(request.getMedicoId())
+        if (principal.isAdmin() && request.getMedicoId() != null) {
+            Long newMedicoId = Long.valueOf(request.getMedicoId());
+            medicoRepository.findById(newMedicoId)
                     .orElseThrow(() -> new ResourceNotFoundException("Médico no encontrado"));
-            estudio.setMedicoId(request.getMedicoId());
+            estudio.setMedicoId(newMedicoId);
         }
+
+        String codigoEstudio = resolveCodigoEstudioForUpdate(request.getCodigoEstudio(), estudio.getCodigoEstudio());
+        estudio.setCodigoEstudio(codigoEstudio);
 
         if (file != null && !file.isEmpty()) {
             // Delete old file if present
@@ -140,7 +155,7 @@ public class EstudioService {
         return toResponse(estudio);
     }
 
-    public void delete(String id, MedicoPrincipal principal) {
+    public void delete(Long id, MedicoPrincipal principal) {
         Estudio estudio = estudioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
 
@@ -151,7 +166,7 @@ public class EstudioService {
         log.info("Soft-deleted estudio with id: {}", id);
     }
 
-    public Resource getArchivoResource(String id, MedicoPrincipal principal) {
+    public Resource getArchivoResource(Long id, MedicoPrincipal principal) {
         Estudio estudio = estudioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
 
@@ -180,7 +195,7 @@ public class EstudioService {
         }
     }
 
-    public String getArchivoContentType(String id) {
+    public String getArchivoContentType(Long id) {
         Estudio estudio = estudioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Estudio no encontrado"));
 
@@ -279,14 +294,62 @@ public class EstudioService {
 
     private EstudioResponse toResponse(Estudio estudio) {
         return EstudioResponse.builder()
-                .id(estudio.getId())
+                .id(estudio.getId().toString())
                 .fecha(estudio.getFecha())
                 .nombre(estudio.getNombre())
                 .observaciones(estudio.getObservaciones())
-                .pacienteId(estudio.getPacienteId())
-                .medicoId(estudio.getMedicoId())
+                .pacienteId(estudio.getPacienteId().toString())
+                .medicoId(estudio.getMedicoId().toString())
+                .tipoEstudio(estudio.getTipoEstudio() != null ? estudio.getTipoEstudio().name() : null)
+                .complejidad(estudio.getComplejidad() != null ? estudio.getComplejidad().name() : null)
+                .codigoEstudio(estudio.getCodigoEstudio())
+                .detalles(estudio.getDetalles())
                 .tieneArchivo(estudio.getArchivoPath() != null)
                 .activo(estudio.isActivo())
                 .build();
+    }
+
+    private TipoEstudio parseTipoEstudio(String tipoEstudio) {
+        if (tipoEstudio == null || tipoEstudio.isBlank()) {
+            throw new IllegalArgumentException("El tipo de estudio es requerido");
+        }
+        try {
+            return TipoEstudio.valueOf(tipoEstudio.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Tipo de estudio inválido: " + tipoEstudio);
+        }
+    }
+
+    private com.medical.api.model.Complejidad parseComplejidad(String complejidad) {
+        if (complejidad == null || complejidad.isBlank()) {
+            throw new IllegalArgumentException("La complejidad es requerida");
+        }
+        try {
+            return com.medical.api.model.Complejidad.valueOf(complejidad.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Complejidad inválida: " + complejidad);
+        }
+    }
+
+    private String resolveCodigoEstudioForCreate(String codigoEstudio, TipoEstudio tipoEstudio) {
+        if (codigoEstudio != null && !codigoEstudio.isBlank()) {
+            return codigoEstudio.trim();
+        }
+
+        String prefix = switch (tipoEstudio) {
+            case GENERICO -> "GEN";
+            case RADIOGRAFIA -> "RX";
+            case ECOGRAFIA -> "ECO";
+            case LABORATORIO -> "LAB";
+            case TOMOGRAFIA -> "TAC";
+        };
+        return prefix + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    private String resolveCodigoEstudioForUpdate(String codigoEstudio, String currentCodigoEstudio) {
+        if (codigoEstudio != null && !codigoEstudio.isBlank()) {
+            return codigoEstudio.trim();
+        }
+        return currentCodigoEstudio;
     }
 }

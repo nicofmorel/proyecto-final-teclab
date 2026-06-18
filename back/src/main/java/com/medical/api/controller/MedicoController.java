@@ -27,7 +27,7 @@ public class MedicoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<MedicoResponse> findById(
-            @PathVariable String id,
+            @PathVariable Long id,
             @AuthenticationPrincipal MedicoPrincipal principal) {
         return ResponseEntity.ok(medicoService.findById(id, principal));
     }
@@ -40,13 +40,13 @@ public class MedicoController {
 
     @PutMapping("/{id}")
     public ResponseEntity<MedicoResponse> update(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody MedicoRequest request) {
         return ResponseEntity.ok(medicoService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         medicoService.delete(id);
         return ResponseEntity.noContent().build();
     }

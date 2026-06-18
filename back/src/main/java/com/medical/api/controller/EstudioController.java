@@ -32,7 +32,7 @@ public class EstudioController {
 
     @GetMapping("/{id}")
     public ResponseEntity<EstudioResponse> findById(
-            @PathVariable String id,
+            @PathVariable Long id,
             @AuthenticationPrincipal MedicoPrincipal principal) {
         return ResponseEntity.ok(estudioService.findById(id, principal));
     }
@@ -48,7 +48,7 @@ public class EstudioController {
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<EstudioResponse> update(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestPart("estudio") EstudioRequest request,
             @RequestPart(value = "archivo", required = false) MultipartFile archivo,
             @AuthenticationPrincipal MedicoPrincipal principal) {
@@ -57,7 +57,7 @@ public class EstudioController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
-            @PathVariable String id,
+            @PathVariable Long id,
             @AuthenticationPrincipal MedicoPrincipal principal) {
         estudioService.delete(id, principal);
         return ResponseEntity.noContent().build();
@@ -65,7 +65,7 @@ public class EstudioController {
 
     @GetMapping("/{id}/archivo")
     public ResponseEntity<Resource> getArchivo(
-            @PathVariable String id,
+            @PathVariable Long id,
             @AuthenticationPrincipal MedicoPrincipal principal) {
         Resource resource = estudioService.getArchivoResource(id, principal);
         String contentType = estudioService.getArchivoContentType(id);

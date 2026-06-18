@@ -30,7 +30,7 @@ public class MedicoService {
                 .collect(Collectors.toList());
     }
 
-    public MedicoResponse findById(String id, MedicoPrincipal principal) {
+    public MedicoResponse findById(Long id, MedicoPrincipal principal) {
         // ADMIN can access any; MEDICO can only access self
         if (!principal.isAdmin() && !principal.getMedicoId().equals(id)) {
             throw new UnauthorizedException("Acceso denegado");
@@ -57,7 +57,6 @@ public class MedicoService {
         }
 
         Medico medico = Medico.builder()
-                .id(UUID.randomUUID().toString())
                 .nombre(request.getNombre())
                 .apellido(request.getApellido())
                 .documento(request.getDocumento())
@@ -74,7 +73,7 @@ public class MedicoService {
         return toResponse(medico);
     }
 
-    public MedicoResponse update(String id, MedicoRequest request) {
+    public MedicoResponse update(Long id, MedicoRequest request) {
         Medico existing = medicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Médico no encontrado"));
 
@@ -102,7 +101,7 @@ public class MedicoService {
         return toResponse(existing);
     }
 
-    public void delete(String id) {
+    public void delete(Long id) {
         Medico medico = medicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Médico no encontrado"));
 
@@ -113,7 +112,7 @@ public class MedicoService {
 
     private MedicoResponse toResponse(Medico medico) {
         return MedicoResponse.builder()
-                .id(medico.getId())
+                .id(medico.getId().toString())
                 .nombre(medico.getNombre())
                 .apellido(medico.getApellido())
                 .documento(medico.getDocumento())
