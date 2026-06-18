@@ -54,8 +54,9 @@ class EstudioServiceTest {
         request.setDetalles(OBJECT_MAPPER.readTree("{\"regionAnatomica\":\"Tórax\",\"lateralidad\":\"Bilateral\",\"proyeccion\":\"Frontal y lateral\",\"contraste\":\"No\"}"));
         request.setMedicoId("1");
 
-        when(pacienteRepository.findById(10L)).thenReturn(Optional.of(new com.medical.api.model.Paciente()));
-        when(medicoRepository.findById(1L)).thenReturn(Optional.of(new com.medical.api.model.Medico()));
+        when(pacienteRepository.findById(10L)).thenReturn(Optional.of(Paciente.builder().nombre("Luis").apellido("Gomez").build()));
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(Medico.builder().nombre("Ana").apellido("Perez").build()));
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(Medico.builder().nombre("Ana").apellido("Perez").build()));
         when(estudioRepository.save(any(Estudio.class))).thenAnswer(invocation -> {
             Estudio estudio = invocation.getArgument(0);
             estudio.setId(1L);
@@ -75,6 +76,8 @@ class EstudioServiceTest {
         assertThat(response.getCodigoEstudio()).startsWith("RX-");
         assertThat(response.getTipoEstudio()).isEqualTo("RADIOGRAFIA");
         assertThat(response.getDetalles().get("regionAnatomica").asText()).isEqualTo("Tórax");
+        assertThat(response.getPacienteNombre()).isEqualTo("Luis Gomez");
+        assertThat(response.getMedicoNombre()).isEqualTo("Ana Perez");
     }
 
     @Test
@@ -99,7 +102,8 @@ class EstudioServiceTest {
         request.setDetalles(OBJECT_MAPPER.readTree("{\"region\":\"Cráneo\",\"contraste\":\"Sí\",\"sedacion\":\"No\",\"observacionesTecnicas\":\"Sin incidencias\"}"));
 
         when(estudioRepository.findById(99L)).thenReturn(Optional.of(existing));
-        when(pacienteRepository.findById(10L)).thenReturn(Optional.of(new com.medical.api.model.Paciente()));
+        when(pacienteRepository.findById(10L)).thenReturn(Optional.of(Paciente.builder().nombre("Luis").apellido("Gomez").build()));
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(Medico.builder().nombre("Ana").apellido("Perez").build()));
         when(estudioRepository.save(any(Estudio.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = estudioService.update(99L, request, null, principal);
@@ -112,6 +116,8 @@ class EstudioServiceTest {
         assertThat(saved.getTipoEstudio()).isEqualTo(TipoEstudio.TOMOGRAFIA);
         assertThat(saved.getComplejidad()).isEqualTo(Complejidad.ALTA);
         assertThat(response.getCodigoEstudio()).isEqualTo("GEN-ABC12345");
+        assertThat(response.getPacienteNombre()).isEqualTo("Luis Gomez");
+        assertThat(response.getMedicoNombre()).isEqualTo("Ana Perez");
     }
 
     @Test

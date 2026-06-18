@@ -29,6 +29,7 @@ public class Estudio {
     private Long pacienteId;
     private Long medicoId;
     private String archivoPath;
+    private String archivoNombreOriginal;
     private boolean activo;
 
     @Enumerated(EnumType.STRING)

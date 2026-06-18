@@ -115,9 +115,9 @@ public class EstudioService {
         pacienteRepository.findById(Long.valueOf(request.getPacienteId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
 
-        String archivoPath = null;
+        FileInfo archivoInfo = null;
         if (file != null && !file.isEmpty()) {
-            archivoPath = saveFile(file);
+            archivoInfo = saveFile(file);
         }
 
         String detalles = normalizeDetalles(tipoEstudio, request.getDetalles());
@@ -129,7 +129,8 @@ public class EstudioService {
                 .observaciones(request.getObservaciones())
                 .pacienteId(Long.valueOf(request.getPacienteId()))
                 .medicoId(medicoId)
-                .archivoPath(archivoPath)
+                .archivoPath(archivoInfo != null ? archivoInfo.storedFilename() : null)
+                .archivoNombreOriginal(archivoInfo != null ? archivoInfo.originalFilename() : null)
                 .tipoEstudio(tipoEstudio)
                 .complejidad(parseComplejidad(request.getComplejidad()))
                 .codigoEstudio(codigoEstudio)
@@ -176,7 +177,9 @@ public class EstudioService {
             if (estudio.getArchivoPath() != null) {
                 deleteFile(estudio.getArchivoPath());
             }
-            estudio.setArchivoPath(saveFile(file));
+            FileInfo archivoInfo = saveFile(file);
+            estudio.setArchivoPath(archivoInfo.storedFilename());
+            estudio.setArchivoNombreOriginal(archivoInfo.originalFilename());
         }
 
         estudioRepository.save(estudio);
@@ -275,7 +278,9 @@ public class EstudioService {
             addRow(table, "Estado", estudio.isActivo() ? "Activo" : "Inactivo");
             addRow(table, "Paciente", buildFullName(paciente));
             addRow(table, "Médico", buildFullName(medico));
-            addRow(table, "Archivo", estudio.getArchivoPath() != null ? estudio.getArchivoPath() : "Sin archivo adjunto");
+            addRow(table, "Archivo adjunto", estudio.getArchivoNombreOriginal() != null
+                    ? estudio.getArchivoNombreOriginal()
+                    : (estudio.getArchivoPath() != null ? fileName(estudio.getArchivoPath()) : "Sin archivo adjunto"));
             document.add(table);
 
             document.add(new Paragraph("Observaciones", sectionFont));
@@ -301,7 +306,7 @@ public class EstudioService {
         }
     }
 
-    private String saveFile(MultipartFile file) {
+    private FileInfo saveFile(MultipartFile file) {
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || originalFilename.isBlank()) {
             throw new IllegalArgumentException("Nombre de archivo inválido");
@@ -347,7 +352,7 @@ public class EstudioService {
 
             Files.copy(file.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
             log.info("Saved file: {}", storedFilename);
-            return storedFilename;
+            return new FileInfo(storedFilename, originalFilename);
         } catch (IOException e) {
             log.error("Error saving file");
             throw new RuntimeException("Error al guardar el archivo");
@@ -392,6 +397,10 @@ public class EstudioService {
                 .complejidad(estudio.getComplejidad() != null ? estudio.getComplejidad().name() : null)
                 .codigoEstudio(estudio.getCodigoEstudio())
                 .detalles(parseStoredDetalles(estudio.getDetalles()))
+                .archivoPath(estudio.getArchivoPath())
+                .archivoNombreOriginal(estudio.getArchivoNombreOriginal())
+                .pacienteNombre(buildFullName(pacienteRepository.findById(estudio.getPacienteId()).orElse(null)))
+                .medicoNombre(buildFullName(medicoRepository.findById(estudio.getMedicoId()).orElse(null)))
                 .tieneArchivo(estudio.getArchivoPath() != null)
                 .activo(estudio.isActivo())
                 .build();
@@ -586,4 +595,13 @@ public class EstudioService {
             default -> key;
         };
     }
+
+    private String fileName(String path) {
+        if (path == null || path.isBlank()) {
+            return "—";
+        }
+        return Paths.get(path).getFileName().toString();
+    }
+
+    private record FileInfo(String storedFilename, String originalFilename) {}
 }

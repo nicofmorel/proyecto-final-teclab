@@ -28,6 +28,10 @@ public class EstudioResponse {
     private String complejidad;
     private String codigoEstudio;
     private JsonNode detalles;
+    private String archivoPath;
+    private String archivoNombreOriginal;
+    private String pacienteNombre;
+    private String medicoNombre;
     private boolean tieneArchivo;
     private boolean activo;
 }

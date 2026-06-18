@@ -177,8 +177,13 @@ function renderTable() {
       const link = document.createElement('a');
       link.className = 'file-badge';
       link.href = '#';
-      link.title = 'Ver / descargar archivo';
-      link.innerHTML = '<i class="bi bi-paperclip"></i> Archivo';
+      link.title = getArchivoNombre(e) || 'Ver / descargar archivo';
+      const icon = document.createElement('i');
+      icon.className = 'bi bi-paperclip';
+      const label = document.createElement('span');
+      label.textContent = ` ${getArchivoLabel(e) || 'Archivo Adjunto'}`;
+      link.appendChild(icon);
+      link.appendChild(label);
       link.addEventListener('click', (ev) => {
         ev.preventDefault();
         viewArchivo(e.id);
@@ -251,6 +256,20 @@ function formatDate(dateStr) {
 
 function formatStudyType(type) {
   return ESTUDIO_TIPOS[type] || ESTUDIO_TIPOS.GENERICO;
+}
+
+function getArchivoLabel(estudio) {
+  return estudio?.tieneArchivo ? 'Archivo Adjunto' : null;
+}
+
+function getArchivoNombre(estudio) {
+  if (estudio?.archivoNombreOriginal) {
+    return estudio.archivoNombreOriginal;
+  }
+  if (estudio?.archivoPath) {
+    return estudio.archivoPath.split('/').pop();
+  }
+  return estudio?.tieneArchivo ? 'Archivo Adjunto' : null;
 }
 
 function renderDetailValue(value) {
@@ -423,16 +442,17 @@ async function openDetail(id) {
     currentDetailStudyId = id;
     clearArchivoPreview();
     const estudio = await apiGet(`/estudios/${id}`);
+    const archivoNombre = getArchivoNombre(estudio) || 'Sin archivo adjunto';
     document.getElementById('d-fecha').textContent = formatDate(estudio.fecha);
     document.getElementById('d-codigo').textContent = estudio.codigoEstudio || '—';
     document.getElementById('d-tipo').textContent = formatStudyType(estudio.tipoEstudio);
     document.getElementById('d-complejidad').textContent = ESTUDIO_COMPLEJIDADES[estudio.complejidad] || '—';
     document.getElementById('d-nombre').textContent = estudio.nombre || '—';
     document.getElementById('d-estado').textContent = estudio.activo === false ? 'Inactivo' : 'Activo';
-    document.getElementById('d-paciente').textContent = `${estudio.paciente?.nombre || ''} ${estudio.paciente?.apellido || ''}`.trim() || '—';
+    document.getElementById('d-paciente').textContent = estudio.pacienteNombre || `${estudio.paciente?.nombre || ''} ${estudio.paciente?.apellido || ''}`.trim() || '—';
     document.getElementById('d-observaciones').innerHTML = renderDetailValue(estudio.observaciones);
     document.getElementById('d-detalles').innerHTML = renderDetailObject(estudio.detalles);
-    document.getElementById('d-archivo').textContent = estudio.archivoPath ? estudio.archivoPath.split('/').pop() : 'Sin archivo adjunto';
+    document.getElementById('d-archivo').textContent = archivoNombre;
     detailModal.show();
     if (estudio.archivoPath || estudio.tieneArchivo) {
       try {
@@ -440,7 +460,7 @@ async function openDetail(id) {
         if (archivo) {
           renderArchivoPreview({
             ...archivo,
-            filename: estudio.archivoPath ? estudio.archivoPath.split('/').pop() : '',
+            filename: getArchivoNombre(estudio) || '',
           });
         }
       } catch (previewErr) {
@@ -606,7 +626,7 @@ function openEdit(e) {
 
   if (e.archivoPath || e.tieneArchivo) {
     document.getElementById('e-archivo-actual-group').style.display = '';
-    const nombre = e.archivoPath ? e.archivoPath.split('/').pop() : 'Archivo adjunto';
+    const nombre = getArchivoNombre(e) || 'Archivo adjunto';
     document.getElementById('e-archivo-nombre').textContent = nombre;
   } else {
     document.getElementById('e-archivo-actual-group').style.display = 'none';

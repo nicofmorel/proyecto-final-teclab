@@ -358,7 +358,7 @@ body {
   min-height: 100vh;
   background:
     linear-gradient(rgba(13, 71, 161, 0.42), rgba(13, 71, 161, 0.42)),
-    url('../assets/login-bg.png') center center / cover no-repeat;
+    url('../assets/login-bg.svg') center center / cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
