@@ -96,6 +96,10 @@ const detailModal  = new bootstrap.Modal(detailEl);
 const form         = document.getElementById('form-estudio');
 const tbody        = document.getElementById('tbody-estudios');
 const detailsContainer = document.getElementById('e-detalles-container');
+const detailArchivoOpen = document.getElementById('d-archivo-open');
+const detailPreview = document.getElementById('d-preview');
+let currentDetailStudyId = null;
+let currentDetailArchivoUrl = null;
 const filterInputs = {
   q: document.getElementById('filter-q'),
   tipo: document.getElementById('filter-tipo'),
@@ -259,6 +263,71 @@ function renderDetailObject(details) {
   return entries.map(([key, value]) => `<div><strong>${escapeHtml(key)}:</strong> ${renderDetailValue(value)}</div>`).join('');
 }
 
+function getArchivoKind(filename, contentType = '') {
+  const ext = (filename || '').split('.').pop().toLowerCase();
+  if (contentType.includes('pdf') || ext === 'pdf') return 'pdf';
+  if (contentType.startsWith('image/') || ['jpg', 'jpeg', 'png'].includes(ext)) return 'image';
+  return 'other';
+}
+
+function clearArchivoPreview() {
+  if (currentDetailArchivoUrl) {
+    URL.revokeObjectURL(currentDetailArchivoUrl);
+    currentDetailArchivoUrl = null;
+  }
+  if (detailPreview) {
+    detailPreview.classList.add('text-center', 'text-muted');
+    detailPreview.innerHTML = 'Sin archivo para previsualizar.';
+  }
+  if (detailArchivoOpen) {
+    detailArchivoOpen.classList.add('d-none');
+  }
+}
+
+function renderArchivoPreview({ blob, filename, contentType }) {
+  clearArchivoPreview();
+  if (!detailPreview) return;
+
+  currentDetailArchivoUrl = URL.createObjectURL(blob);
+  const kind = getArchivoKind(filename, contentType || blob.type || '');
+
+  if (kind === 'pdf') {
+    const iframe = document.createElement('iframe');
+    iframe.src = currentDetailArchivoUrl;
+    iframe.title = 'Vista previa del archivo';
+    iframe.className = 'w-100 border-0 rounded';
+    iframe.style.minHeight = '420px';
+    detailPreview.innerHTML = '';
+    detailPreview.classList.remove('text-center', 'text-muted');
+    detailPreview.appendChild(iframe);
+  } else if (kind === 'image') {
+    const img = document.createElement('img');
+    img.src = currentDetailArchivoUrl;
+    img.alt = 'Vista previa del archivo';
+    img.className = 'img-fluid rounded';
+    img.style.maxHeight = '420px';
+    detailPreview.innerHTML = '';
+    detailPreview.classList.remove('text-center', 'text-muted');
+    detailPreview.appendChild(img);
+  } else {
+    detailPreview.textContent = 'Este tipo de archivo no admite vista previa inline. Usá el botón para abrirlo.';
+    detailPreview.classList.add('text-center', 'text-muted');
+  }
+
+  if (detailArchivoOpen) {
+    detailArchivoOpen.classList.remove('d-none');
+  }
+}
+
+async function fetchArchivoBlob(id) {
+  const res = await apiGetRaw(`/estudios/${id}/archivo`);
+  if (!res) return null;
+  return {
+    blob: await res.blob(),
+    contentType: res.headers.get('content-type') || '',
+  };
+}
+
 function parseDetalleValues(raw) {
   if (!raw) return {};
   if (typeof raw === 'object') return raw;
@@ -336,6 +405,8 @@ function collectDetailValues() {
 
 async function openDetail(id) {
   try {
+    currentDetailStudyId = id;
+    clearArchivoPreview();
     const estudio = await apiGet(`/estudios/${id}`);
     document.getElementById('d-fecha').textContent = formatDate(estudio.fecha);
     document.getElementById('d-codigo').textContent = estudio.codigoEstudio || '—';
@@ -348,6 +419,22 @@ async function openDetail(id) {
     document.getElementById('d-detalles').innerHTML = renderDetailObject(estudio.detalles);
     document.getElementById('d-archivo').textContent = estudio.archivoPath ? estudio.archivoPath.split('/').pop() : 'Sin archivo adjunto';
     detailModal.show();
+    if (estudio.archivoPath || estudio.tieneArchivo) {
+      try {
+        const archivo = await fetchArchivoBlob(id);
+        if (archivo) {
+          renderArchivoPreview({
+            ...archivo,
+            filename: estudio.archivoPath ? estudio.archivoPath.split('/').pop() : '',
+          });
+        }
+      } catch (previewErr) {
+        detailPreview.textContent = 'No se pudo cargar la vista previa.';
+        if (detailArchivoOpen) {
+          detailArchivoOpen.classList.remove('d-none');
+        }
+      }
+    }
   } catch (err) {
     showToast(err.message || 'No se pudo cargar el detalle.', 'error');
   }
@@ -456,11 +543,10 @@ function populatePacienteSelect() {
 /* ── View file ── */
 async function viewArchivo(id) {
   try {
-    const res = await apiGetRaw(`/estudios/${id}/archivo`);
-    if (!res) return;
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    const archivo = await fetchArchivoBlob(id);
+    if (!archivo) return;
+    const url = URL.createObjectURL(archivo.blob);
+    window.open(url, '_blank', 'noopener');
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   } catch (err) {
     showToast('No se pudo obtener el archivo: ' + err.message, 'error');
@@ -595,6 +681,17 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
     setDelLoading(false);
     deletingId = null;
   }
+});
+
+if (detailArchivoOpen) {
+  detailArchivoOpen.addEventListener('click', () => {
+    if (currentDetailStudyId) viewArchivo(currentDetailStudyId);
+  });
+}
+
+detailEl.addEventListener('hidden.bs.modal', () => {
+  currentDetailStudyId = null;
+  clearArchivoPreview();
 });
 
 /* ── Init ── */

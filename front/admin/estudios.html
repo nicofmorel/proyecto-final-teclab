@@ -226,7 +226,14 @@
           <div class="col-md-6"><div class="small text-muted">Médico</div><div id="d-medico" class="fw-semibold">—</div></div>
           <div class="col-12"><div class="small text-muted">Observaciones</div><div id="d-observaciones" class="border rounded p-3 bg-light">—</div></div>
           <div class="col-12"><div class="small text-muted mb-2">Detalles específicos</div><div id="d-detalles" class="border rounded p-3 bg-light">—</div></div>
-          <div class="col-12"><div class="small text-muted">Archivo</div><div id="d-archivo" class="fw-semibold">—</div></div>
+          <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+              <div class="small text-muted">Archivo</div>
+              <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="d-archivo-open">Abrir archivo</button>
+            </div>
+            <div id="d-archivo" class="fw-semibold mb-3">—</div>
+            <div id="d-preview" class="border rounded p-3 bg-light text-center text-muted small">Sin archivo para previsualizar.</div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
