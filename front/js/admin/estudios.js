@@ -91,7 +91,7 @@ const detailsContainer = document.getElementById('e-detalles-container');
 
 /* ── Load ── */
 async function loadData() {
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="9"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando…</td></tr>';
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="10"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando…</td></tr>';
   try {
     [estudios, pacientes, medicos] = await Promise.all([
       apiGet('/estudios'),
@@ -101,7 +101,7 @@ async function loadData() {
     renderTable();
     populateSelects();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-3"><i class="bi bi-exclamation-triangle me-2"></i>${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-3"><i class="bi bi-exclamation-triangle me-2"></i>${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -111,7 +111,7 @@ function renderTable() {
   if (!estudios || estudios.length === 0) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 9;
+    td.colSpan = 10;
     td.className = 'text-center py-4 text-muted';
     td.textContent = 'No hay estudios registrados.';
     tr.appendChild(td);
@@ -145,6 +145,7 @@ function renderTable() {
 
     tr.appendChild(tdText(formatDate(e.fecha)));
     tr.appendChild(tdText(e.nombre || '—'));
+    tr.appendChild(tdText(e.codigoEstudio || '—'));
     tr.appendChild(tdText(formatStudyType(e.tipoEstudio)));
     tr.appendChild(tdText(pacNombre));
     tr.appendChild(tdText(medNombre));
@@ -374,6 +375,7 @@ function openCreate() {
   document.getElementById('modal-estudio-title').textContent = 'Nuevo Estudio';
   document.getElementById('e-archivo-actual-group').style.display = 'none';
   document.getElementById('btn-save-text').textContent = 'Guardar';
+  document.getElementById('e-codigoEstudio').value = 'Se generará automáticamente';
 
   // Set today as default date
   const today = new Date().toISOString().split('T')[0];
@@ -393,6 +395,7 @@ function openEdit(e) {
 
   document.getElementById('e-fecha').value         = e.fecha ? e.fecha.split('T')[0] : '';
   document.getElementById('e-nombre').value        = e.nombre        || '';
+  document.getElementById('e-codigoEstudio').value = e.codigoEstudio || '—';
   document.getElementById('e-observaciones').value = e.observaciones || '';
   document.getElementById('e-tipoEstudio').value   = e.tipoEstudio || 'GENERICO';
   document.getElementById('e-complejidad').value   = e.complejidad || 'BAJA';
