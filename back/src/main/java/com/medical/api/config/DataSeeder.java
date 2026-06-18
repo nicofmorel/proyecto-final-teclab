@@ -129,6 +129,48 @@ public class DataSeeder implements CommandLineRunner {
                 .activo(true)
                 .build());
 
-        log.info("Seed data loaded: 4 medicos, 2 pacientes, 2 estudios");
+        estudioRepository.save(Estudio.builder()
+                .fecha(LocalDate.now().minusDays(1))
+                .nombre("Ecografía Abdominal")
+                .observaciones("Control de rutina sin alteraciones relevantes.")
+                .pacienteId(paciente1.getId())
+                .medicoId(medicoActivo.getId())
+                .archivoPath(null)
+                .tipoEstudio(TipoEstudio.ECOGRAFIA)
+                .complejidad(Complejidad.MEDIA)
+                .codigoEstudio("ECO-2026-0003")
+                .detalles("{\"zonaEstudio\":\"Abdomen superior\",\"ayuno\":\"Sí\",\"via\":\"Abdominal\",\"hallazgos\":\"Sin hallazgos patológicos\"}")
+                .activo(true)
+                .build());
+
+        estudioRepository.save(Estudio.builder()
+                .fecha(LocalDate.now())
+                .nombre("Laboratorio Completo")
+                .observaciones("Incluye análisis de control general.")
+                .pacienteId(paciente2.getId())
+                .medicoId(medicoActivo.getId())
+                .archivoPath(null)
+                .tipoEstudio(TipoEstudio.LABORATORIO)
+                .complejidad(Complejidad.BAJA)
+                .codigoEstudio("LAB-2026-0004")
+                .detalles("{\"muestra\":\"Sangre\",\"panel\":\"Hemograma completo\",\"ayuno\":\"Sí\",\"prioridad\":\"Rutina\"}")
+                .activo(true)
+                .build());
+
+        estudioRepository.save(Estudio.builder()
+                .fecha(LocalDate.now().plusDays(1))
+                .nombre("Tomografía de Cráneo")
+                .observaciones("Estudio solicitado por cefalea persistente.")
+                .pacienteId(paciente1.getId())
+                .medicoId(medicoActivo.getId())
+                .archivoPath(null)
+                .tipoEstudio(TipoEstudio.TOMOGRAFIA)
+                .complejidad(Complejidad.ALTA)
+                .codigoEstudio("TAC-2026-0005")
+                .detalles("{\"region\":\"Cráneo\",\"contraste\":\"Sí\",\"sedacion\":\"No\",\"observacionesTecnicas\":\"Cortes axiales sin incidencias\"}")
+                .activo(true)
+                .build());
+
+        log.info("Seed data loaded: 4 medicos, 2 pacientes, 5 estudios");
     }
 }
