@@ -1,6 +1,7 @@
 package com.medical.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -37,6 +38,5 @@ public class EstudioRequest {
     @Size(max = 100, message = "El código de estudio no puede exceder 100 caracteres")
     private String codigoEstudio;
 
-    @Size(max = 4000, message = "Los detalles no pueden exceder 4000 caracteres")
-    private String detalles;
+    private JsonNode detalles;
 }

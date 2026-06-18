@@ -553,7 +553,7 @@ form.addEventListener('submit', async (e) => {
       medicoId:      medicoId,
       tipoEstudio:   document.getElementById('e-tipoEstudio').value,
       complejidad:   document.getElementById('e-complejidad').value,
-      detalles:      Object.keys(detalleValues).length ? JSON.stringify(detalleValues) : null,
+      detalles:      Object.keys(detalleValues).length ? detalleValues : null,
     };
     fd.append('estudio', new Blob([JSON.stringify(estudioData)], { type: 'application/json' }));
     if (hasFile) fd.append('archivo', archivoInput.files[0]);

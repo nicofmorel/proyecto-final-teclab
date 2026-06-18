@@ -12,6 +12,7 @@ import com.medical.api.repository.PacienteRepository;
 import com.medical.api.security.MedicoPrincipal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
@@ -27,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -45,6 +47,12 @@ public class EstudioService {
     );
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final Map<TipoEstudio, List<String>> DETAIL_KEYS = Map.of(
+            TipoEstudio.RADIOGRAFIA, List.of("regionAnatomica", "lateralidad", "proyeccion", "contraste"),
+            TipoEstudio.ECOGRAFIA, List.of("zonaEstudio", "ayuno", "via", "hallazgos"),
+            TipoEstudio.LABORATORIO, List.of("muestra", "panel", "ayuno", "prioridad"),
+            TipoEstudio.TOMOGRAFIA, List.of("region", "contraste", "sedacion", "observacionesTecnicas")
+    );
 
     private final EstudioRepository estudioRepository;
     private final MedicoRepository medicoRepository;
@@ -96,7 +104,7 @@ public class EstudioService {
             archivoPath = saveFile(file);
         }
 
-        validateSpecificDetails(tipoEstudio, request.getDetalles());
+        String detalles = normalizeDetalles(tipoEstudio, request.getDetalles());
         String codigoEstudio = resolveCodigoEstudioForCreate(request.getCodigoEstudio(), tipoEstudio);
 
         Estudio estudio = Estudio.builder()
@@ -109,7 +117,7 @@ public class EstudioService {
                 .tipoEstudio(tipoEstudio)
                 .complejidad(parseComplejidad(request.getComplejidad()))
                 .codigoEstudio(codigoEstudio)
-                .detalles(request.getDetalles())
+                .detalles(detalles)
                 .activo(true)
                 .build();
 
@@ -134,8 +142,8 @@ public class EstudioService {
         estudio.setPacienteId(Long.valueOf(request.getPacienteId()));
         estudio.setTipoEstudio(tipoEstudio);
         estudio.setComplejidad(parseComplejidad(request.getComplejidad()));
-        validateSpecificDetails(tipoEstudio, request.getDetalles());
-        estudio.setDetalles(request.getDetalles());
+        String detalles = normalizeDetalles(tipoEstudio, request.getDetalles());
+        estudio.setDetalles(detalles);
 
         if (principal.isAdmin() && request.getMedicoId() != null) {
             Long newMedicoId = Long.valueOf(request.getMedicoId());
@@ -308,7 +316,7 @@ public class EstudioService {
                 .tipoEstudio(estudio.getTipoEstudio() != null ? estudio.getTipoEstudio().name() : null)
                 .complejidad(estudio.getComplejidad() != null ? estudio.getComplejidad().name() : null)
                 .codigoEstudio(estudio.getCodigoEstudio())
-                .detalles(estudio.getDetalles())
+                .detalles(parseStoredDetalles(estudio.getDetalles()))
                 .tieneArchivo(estudio.getArchivoPath() != null)
                 .activo(estudio.isActivo())
                 .build();
@@ -358,21 +366,63 @@ public class EstudioService {
         return currentCodigoEstudio;
     }
 
-    private void validateSpecificDetails(TipoEstudio tipoEstudio, String detalles) {
+    private String normalizeDetalles(TipoEstudio tipoEstudio, JsonNode rawDetalles) {
+        JsonNode detailsNode = parseDetailsNode(rawDetalles);
+
         if (tipoEstudio == TipoEstudio.GENERICO) {
-            return;
+            return detailsNode == null ? null : writeJson(detailsNode);
         }
 
-        JsonNode detailsNode;
-        try {
-            if (detalles == null || detalles.isBlank()) {
-                throw new IllegalArgumentException("Los detalles específicos son requeridos para " + tipoEstudio.name());
-            }
-            detailsNode = OBJECT_MAPPER.readTree(detalles);
-        } catch (IOException e) {
+        if (detailsNode == null || !detailsNode.isObject()) {
             throw new IllegalArgumentException("Los detalles específicos deben ser un JSON válido");
         }
 
+        validateSpecificDetails(tipoEstudio, detailsNode);
+        ObjectNode normalized = OBJECT_MAPPER.createObjectNode();
+        for (String key : DETAIL_KEYS.getOrDefault(tipoEstudio, List.of())) {
+            normalized.set(key, detailsNode.get(key));
+        }
+        return writeJson(normalized);
+    }
+
+    private JsonNode parseStoredDetalles(String detalles) {
+        if (detalles == null || detalles.isBlank()) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.readTree(detalles);
+        } catch (IOException e) {
+            throw new IllegalStateException("Los detalles almacenados tienen un formato inválido", e);
+        }
+    }
+
+    private JsonNode parseDetailsNode(JsonNode rawDetalles) {
+        if (rawDetalles == null || rawDetalles.isNull()) {
+            return null;
+        }
+        if (rawDetalles.isTextual()) {
+            String text = rawDetalles.asText();
+            if (text.isBlank()) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.readTree(text);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("Los detalles específicos deben ser un JSON válido");
+            }
+        }
+        return rawDetalles;
+    }
+
+    private String writeJson(JsonNode node) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(node);
+        } catch (IOException e) {
+            throw new IllegalStateException("No se pudieron normalizar los detalles", e);
+        }
+    }
+
+    private void validateSpecificDetails(TipoEstudio tipoEstudio, JsonNode detailsNode) {
         switch (tipoEstudio) {
             case RADIOGRAFIA -> {
                 requireDetail(detailsNode, "regionAnatomica", tipoEstudio, "la región anatómica");

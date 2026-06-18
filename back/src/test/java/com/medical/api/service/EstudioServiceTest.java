@@ -4,6 +4,7 @@ import com.medical.api.dto.EstudioRequest;
 import com.medical.api.model.Complejidad;
 import com.medical.api.model.Estudio;
 import com.medical.api.model.TipoEstudio;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.medical.api.repository.EstudioRepository;
 import com.medical.api.repository.MedicoRepository;
 import com.medical.api.repository.PacienteRepository;
@@ -27,6 +28,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class EstudioServiceTest {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Mock
     private EstudioRepository estudioRepository;
 
@@ -40,12 +43,12 @@ class EstudioServiceTest {
     private EstudioService estudioService;
 
     @Test
-    void createShouldGenerateCodigoAndPersistDetalles() {
+    void createShouldGenerateCodigoAndPersistDetalles() throws Exception {
         MedicoPrincipal principal = new MedicoPrincipal(1L, "admin@demo.com", "ADMIN");
         EstudioRequest request = baseRequest();
         request.setTipoEstudio(TipoEstudio.RADIOGRAFIA.name());
         request.setComplejidad(Complejidad.MEDIA.name());
-        request.setDetalles("{\"regionAnatomica\":\"Tórax\",\"lateralidad\":\"Bilateral\",\"proyeccion\":\"Frontal y lateral\",\"contraste\":\"No\"}");
+        request.setDetalles(OBJECT_MAPPER.readTree("{\"regionAnatomica\":\"Tórax\",\"lateralidad\":\"Bilateral\",\"proyeccion\":\"Frontal y lateral\",\"contraste\":\"No\"}"));
         request.setMedicoId("1");
 
         when(pacienteRepository.findById(10L)).thenReturn(Optional.of(new com.medical.api.model.Paciente()));
@@ -68,10 +71,11 @@ class EstudioServiceTest {
         assertThat(saved.getCodigoEstudio()).startsWith("RX-");
         assertThat(response.getCodigoEstudio()).startsWith("RX-");
         assertThat(response.getTipoEstudio()).isEqualTo("RADIOGRAFIA");
+        assertThat(response.getDetalles().get("regionAnatomica").asText()).isEqualTo("Tórax");
     }
 
     @Test
-    void updateShouldKeepExistingCodigoWhenRequestDoesNotSendOne() {
+    void updateShouldKeepExistingCodigoWhenRequestDoesNotSendOne() throws Exception {
         MedicoPrincipal principal = new MedicoPrincipal(1L, "medico@demo.com", "MEDICO");
         Estudio existing = Estudio.builder()
                 .id(99L)
@@ -89,7 +93,7 @@ class EstudioServiceTest {
         EstudioRequest request = baseRequest();
         request.setTipoEstudio(TipoEstudio.TOMOGRAFIA.name());
         request.setComplejidad(Complejidad.ALTA.name());
-        request.setDetalles("{\"region\":\"Cráneo\",\"contraste\":\"Sí\",\"sedacion\":\"No\",\"observacionesTecnicas\":\"Sin incidencias\"}");
+        request.setDetalles(OBJECT_MAPPER.readTree("{\"region\":\"Cráneo\",\"contraste\":\"Sí\",\"sedacion\":\"No\",\"observacionesTecnicas\":\"Sin incidencias\"}"));
 
         when(estudioRepository.findById(99L)).thenReturn(Optional.of(existing));
         when(pacienteRepository.findById(10L)).thenReturn(Optional.of(new com.medical.api.model.Paciente()));
@@ -108,12 +112,12 @@ class EstudioServiceTest {
     }
 
     @Test
-    void createShouldRejectMissingRequiredDetailForSpecificType() {
+    void createShouldRejectMissingRequiredDetailForSpecificType() throws Exception {
         MedicoPrincipal principal = new MedicoPrincipal(1L, "admin@demo.com", "ADMIN");
         EstudioRequest request = baseRequest();
         request.setTipoEstudio(TipoEstudio.LABORATORIO.name());
         request.setComplejidad(Complejidad.MEDIA.name());
-        request.setDetalles("{\"muestra\":\"Sangre\",\"panel\":\"Hemograma completo\",\"ayuno\":\"Sí\"}");
+        request.setDetalles(OBJECT_MAPPER.readTree("{\"muestra\":\"Sangre\",\"panel\":\"Hemograma completo\",\"ayuno\":\"Sí\"}"));
         request.setMedicoId("1");
 
         when(pacienteRepository.findById(10L)).thenReturn(Optional.of(new com.medical.api.model.Paciente()));
