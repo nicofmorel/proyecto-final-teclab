@@ -36,6 +36,7 @@ function showToast(message, type = 'info') {
 let medicos = [];
 let editingId = null;
 let deletingId = null;
+let medicoAction = 'delete';
 
 const modalEl       = document.getElementById('modal-medico');
 const confirmEl     = document.getElementById('modal-confirm');
@@ -108,11 +109,16 @@ function renderTable() {
     btnEdit.addEventListener('click', () => openEdit(m));
 
     const btnDel = document.createElement('button');
-    btnDel.className = 'btn-action btn btn-outline-danger';
-    btnDel.title = isActivo ? 'Dar de baja' : 'Ya inactivo';
-    btnDel.disabled = !isActivo;
-    btnDel.innerHTML = '<i class="bi bi-person-x"></i>';
-    btnDel.addEventListener('click', () => openConfirmDelete(m));
+    btnDel.className = isActivo ? 'btn-action btn btn-outline-danger' : 'btn-action btn btn-outline-success';
+    btnDel.title = isActivo ? 'Dar de baja' : 'Reactivar';
+    btnDel.innerHTML = isActivo ? '<i class="bi bi-person-x"></i>' : '<i class="bi bi-person-check"></i>';
+    btnDel.addEventListener('click', () => {
+      if (isActivo) {
+        openConfirmDelete(m);
+      } else {
+        openConfirmReactivate(m);
+      }
+    });
 
     tdAcc.appendChild(btnEdit);
     tdAcc.appendChild(btnDel);
@@ -173,9 +179,19 @@ function openEdit(m) {
 
 function openConfirmDelete(m) {
   deletingId = m.id;
+  medicoAction = 'delete';
   const name = `${m.nombre || ''} ${m.apellido || ''}`.trim();
   const p = document.getElementById('modal-confirm-text');
   p.textContent = `¿Está seguro que desea dar de baja al médico "${name}"?`;
+  confirmModal.show();
+}
+
+function openConfirmReactivate(m) {
+  deletingId = m.id;
+  medicoAction = 'reactivate';
+  const name = `${m.nombre || ''} ${m.apellido || ''}`.trim();
+  const p = document.getElementById('modal-confirm-text');
+  p.textContent = `¿Desea reactivar al médico "${name}"?`;
   confirmModal.show();
 }
 
@@ -226,7 +242,8 @@ form.addEventListener('submit', async (e) => {
 /* ── Delete ── */
 function setDelLoading(loading) {
   document.getElementById('btn-confirm-delete').disabled = loading;
-  document.getElementById('btn-del-text').textContent = loading ? 'Procesando…' : 'Dar de Baja';
+  const idleText = medicoAction === 'reactivate' ? 'Reactivar' : 'Dar de Baja';
+  document.getElementById('btn-del-text').textContent = loading ? 'Procesando…' : idleText;
   document.getElementById('btn-del-spinner').classList.toggle('d-none', !loading);
 }
 
@@ -234,15 +251,21 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
   if (!deletingId) return;
   setDelLoading(true);
   try {
-    await apiDelete(`/medicos/${deletingId}`);
-    showToast('Médico dado de baja correctamente.', 'success');
+    if (medicoAction === 'reactivate') {
+      await apiPost(`/medicos/${deletingId}/reactivar`, {});
+      showToast('Médico reactivado correctamente.', 'success');
+    } else {
+      await apiDelete(`/medicos/${deletingId}`);
+      showToast('Médico dado de baja correctamente.', 'success');
+    }
     confirmModal.hide();
     await loadMedicos();
   } catch (err) {
-    showToast(err.message || 'Error al dar de baja.', 'error');
+    showToast(err.message || (medicoAction === 'reactivate' ? 'Error al reactivar.' : 'Error al dar de baja.'), 'error');
   } finally {
     setDelLoading(false);
     deletingId = null;
+    medicoAction = 'delete';
   }
 });
 

@@ -104,6 +104,7 @@ proyecto-final-teclab/
 |---|---|---|---|
 | POST | `/api/auth/login` | Autenticación | Público |
 | GET / POST / PUT / DELETE | `/api/medicos/**` | Gestión de médicos | ADMIN |
+| POST | `/api/medicos/{id}/reactivar` | Reactivar un médico dado de baja | ADMIN |
 | GET / POST / PUT / DELETE | `/api/pacientes/**` | Gestión de pacientes | ADMIN / MEDICO |
 | GET / POST / PUT / DELETE | `/api/estudios/**` | Gestión de estudios | ADMIN / MEDICO |
 | GET | `/api/estudios/{id}/archivo` | Ver/descargar archivo adjunto | ADMIN / MEDICO |

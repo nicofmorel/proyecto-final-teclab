@@ -50,4 +50,10 @@ public class MedicoController {
         medicoService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/reactivar")
+    public ResponseEntity<Void> reactivate(@PathVariable Long id) {
+        medicoService.reactivate(id);
+        return ResponseEntity.noContent().build();
+    }
 }

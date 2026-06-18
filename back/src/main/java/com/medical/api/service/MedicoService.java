@@ -110,6 +110,15 @@ public class MedicoService {
         log.info("Soft-deleted medico with id: {}", id);
     }
 
+    public void reactivate(Long id) {
+        Medico medico = medicoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Médico no encontrado"));
+
+        medico.setActivo(true);
+        medicoRepository.save(medico);
+        log.info("Reactivated medico with id: {}", id);
+    }
+
     private MedicoResponse toResponse(Medico medico) {
         return MedicoResponse.builder()
                 .id(medico.getId().toString())
