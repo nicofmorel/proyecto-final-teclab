@@ -275,6 +275,7 @@ function renderDetailFields(tipo, values = {}) {
 
     input.className = 'form-control';
     input.dataset.detailKey = field.key;
+    input.required = true;
     if (values[field.key] != null && values[field.key] !== '') {
       input.value = values[field.key];
     }

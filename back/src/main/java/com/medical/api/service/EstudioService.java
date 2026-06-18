@@ -10,6 +10,8 @@ import com.medical.api.repository.EstudioRepository;
 import com.medical.api.repository.MedicoRepository;
 import com.medical.api.repository.PacienteRepository;
 import com.medical.api.security.MedicoPrincipal;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
@@ -42,6 +44,7 @@ public class EstudioService {
             "image/png"
     );
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final EstudioRepository estudioRepository;
     private final MedicoRepository medicoRepository;
@@ -93,6 +96,7 @@ public class EstudioService {
             archivoPath = saveFile(file);
         }
 
+        validateSpecificDetails(tipoEstudio, request.getDetalles());
         String codigoEstudio = resolveCodigoEstudioForCreate(request.getCodigoEstudio(), tipoEstudio);
 
         Estudio estudio = Estudio.builder()
@@ -130,6 +134,7 @@ public class EstudioService {
         estudio.setPacienteId(Long.valueOf(request.getPacienteId()));
         estudio.setTipoEstudio(tipoEstudio);
         estudio.setComplejidad(parseComplejidad(request.getComplejidad()));
+        validateSpecificDetails(tipoEstudio, request.getDetalles());
         estudio.setDetalles(request.getDetalles());
 
         if (principal.isAdmin() && request.getMedicoId() != null) {
@@ -351,5 +356,57 @@ public class EstudioService {
             return codigoEstudio.trim();
         }
         return currentCodigoEstudio;
+    }
+
+    private void validateSpecificDetails(TipoEstudio tipoEstudio, String detalles) {
+        if (tipoEstudio == TipoEstudio.GENERICO) {
+            return;
+        }
+
+        JsonNode detailsNode;
+        try {
+            if (detalles == null || detalles.isBlank()) {
+                throw new IllegalArgumentException("Los detalles específicos son requeridos para " + tipoEstudio.name());
+            }
+            detailsNode = OBJECT_MAPPER.readTree(detalles);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Los detalles específicos deben ser un JSON válido");
+        }
+
+        switch (tipoEstudio) {
+            case RADIOGRAFIA -> {
+                requireDetail(detailsNode, "regionAnatomica", tipoEstudio, "la región anatómica");
+                requireDetail(detailsNode, "lateralidad", tipoEstudio, "la lateralidad");
+                requireDetail(detailsNode, "proyeccion", tipoEstudio, "la proyección");
+                requireDetail(detailsNode, "contraste", tipoEstudio, "el contraste");
+            }
+            case ECOGRAFIA -> {
+                requireDetail(detailsNode, "zonaEstudio", tipoEstudio, "la zona estudiada");
+                requireDetail(detailsNode, "ayuno", tipoEstudio, "el ayuno previo");
+                requireDetail(detailsNode, "via", tipoEstudio, "la vía de estudio");
+                requireDetail(detailsNode, "hallazgos", tipoEstudio, "los hallazgos");
+            }
+            case LABORATORIO -> {
+                requireDetail(detailsNode, "muestra", tipoEstudio, "la muestra");
+                requireDetail(detailsNode, "panel", tipoEstudio, "el panel o análisis");
+                requireDetail(detailsNode, "ayuno", tipoEstudio, "el ayuno previo");
+                requireDetail(detailsNode, "prioridad", tipoEstudio, "la prioridad");
+            }
+            case TOMOGRAFIA -> {
+                requireDetail(detailsNode, "region", tipoEstudio, "la región estudiada");
+                requireDetail(detailsNode, "contraste", tipoEstudio, "el contraste");
+                requireDetail(detailsNode, "sedacion", tipoEstudio, "la sedación");
+                requireDetail(detailsNode, "observacionesTecnicas", tipoEstudio, "las observaciones técnicas");
+            }
+            default -> {
+            }
+        }
+    }
+
+    private void requireDetail(JsonNode node, String key, TipoEstudio tipoEstudio, String label) {
+        JsonNode value = node.get(key);
+        if (value == null || value.asText().isBlank()) {
+            throw new IllegalArgumentException("Para " + tipoEstudio.name() + " es requerido " + label);
+        }
     }
 }

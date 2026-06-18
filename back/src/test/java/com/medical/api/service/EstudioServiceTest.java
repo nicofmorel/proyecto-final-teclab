@@ -19,8 +19,8 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -45,7 +45,7 @@ class EstudioServiceTest {
         EstudioRequest request = baseRequest();
         request.setTipoEstudio(TipoEstudio.RADIOGRAFIA.name());
         request.setComplejidad(Complejidad.MEDIA.name());
-        request.setDetalles("{\"regionAnatomica\":\"Tórax\"}");
+        request.setDetalles("{\"regionAnatomica\":\"Tórax\",\"lateralidad\":\"Bilateral\",\"proyeccion\":\"Frontal y lateral\",\"contraste\":\"No\"}");
         request.setMedicoId("1");
 
         when(pacienteRepository.findById(10L)).thenReturn(Optional.of(new com.medical.api.model.Paciente()));
@@ -89,7 +89,7 @@ class EstudioServiceTest {
         EstudioRequest request = baseRequest();
         request.setTipoEstudio(TipoEstudio.TOMOGRAFIA.name());
         request.setComplejidad(Complejidad.ALTA.name());
-        request.setDetalles("{\"region\":\"Cráneo\"}");
+        request.setDetalles("{\"region\":\"Cráneo\",\"contraste\":\"Sí\",\"sedacion\":\"No\",\"observacionesTecnicas\":\"Sin incidencias\"}");
 
         when(estudioRepository.findById(99L)).thenReturn(Optional.of(existing));
         when(pacienteRepository.findById(10L)).thenReturn(Optional.of(new com.medical.api.model.Paciente()));
@@ -105,6 +105,23 @@ class EstudioServiceTest {
         assertThat(saved.getTipoEstudio()).isEqualTo(TipoEstudio.TOMOGRAFIA);
         assertThat(saved.getComplejidad()).isEqualTo(Complejidad.ALTA);
         assertThat(response.getCodigoEstudio()).isEqualTo("GEN-ABC12345");
+    }
+
+    @Test
+    void createShouldRejectMissingRequiredDetailForSpecificType() {
+        MedicoPrincipal principal = new MedicoPrincipal(1L, "admin@demo.com", "ADMIN");
+        EstudioRequest request = baseRequest();
+        request.setTipoEstudio(TipoEstudio.LABORATORIO.name());
+        request.setComplejidad(Complejidad.MEDIA.name());
+        request.setDetalles("{\"muestra\":\"Sangre\",\"panel\":\"Hemograma completo\",\"ayuno\":\"Sí\"}");
+        request.setMedicoId("1");
+
+        when(pacienteRepository.findById(10L)).thenReturn(Optional.of(new com.medical.api.model.Paciente()));
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(new com.medical.api.model.Medico()));
+
+        assertThatThrownBy(() -> estudioService.create(request, null, principal))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("prioridad");
     }
 
     private EstudioRequest baseRequest() {
