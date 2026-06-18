@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACK_DIR="$ROOT_DIR/back"
 FRONT_DIR="$ROOT_DIR/front"
 FRONT_PORT="${FRONT_PORT:-3000}"
+UPLOADS_DIR="$BACK_DIR/uploads"
 
 find_java_home() {
   local candidates=(
@@ -47,6 +48,8 @@ else
   echo "Java no encontrado. Instalalo o definí JAVA_HOME." >&2
   exit 1
 fi
+
+rm -rf "$UPLOADS_DIR"
 
 cleanup() {
   if [[ -n "${BACK_PID:-}" ]] && kill -0 "$BACK_PID" 2>/dev/null; then

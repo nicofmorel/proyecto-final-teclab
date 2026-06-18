@@ -272,6 +272,65 @@ function getArchivoNombre(estudio) {
   return estudio?.tieneArchivo ? 'Archivo Adjunto' : null;
 }
 
+function populateFilterOptions() {
+  const selectedTipo = filterState.tipo;
+  const selectedPaciente = filterState.paciente;
+  const typeSelect = filterInputs.tipo;
+  const patientSelect = filterInputs.paciente;
+
+  if (typeSelect) {
+    typeSelect.innerHTML = '<option value="">Todos los tipos</option>';
+    Object.entries(ESTUDIO_TIPOS).forEach(([value, label]) => {
+      typeSelect.appendChild(new Option(label, value));
+    });
+  }
+
+  if (patientSelect) {
+    patientSelect.innerHTML = '<option value="">Todos mis pacientes</option>';
+    (pacientes || []).filter(p => {
+      const pMedId = p.medicoId || p.medico?.id;
+      return p.activo !== false && String(pMedId) === String(medicoId);
+    }).forEach((p) => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.nombre || ''} ${p.apellido || ''}`.trim();
+      patientSelect.appendChild(opt);
+    });
+  }
+
+  if (typeSelect) typeSelect.value = selectedTipo;
+  if (patientSelect) patientSelect.value = selectedPaciente;
+}
+
+function getFilteredEstudios(list) {
+  const q = filterState.q.trim().toLowerCase();
+  return list.filter((e) => {
+    if (filterState.tipo && String(e.tipoEstudio || '') !== String(filterState.tipo)) return false;
+    if (filterState.paciente && String(e.pacienteId || '') !== String(filterState.paciente)) return false;
+    if (filterState.activo !== '' && String(e.activo) !== String(filterState.activo)) return false;
+    if (!q) return true;
+
+    const haystack = [
+      e.nombre,
+      e.codigoEstudio,
+      e.observaciones,
+      e.tipoEstudio,
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    return haystack.includes(q);
+  });
+}
+
+function syncFiltersFromUI() {
+  filterState = {
+    q: filterInputs.q?.value || '',
+    tipo: filterInputs.tipo?.value || '',
+    paciente: filterInputs.paciente?.value || '',
+    activo: filterInputs.activo?.value || '',
+  };
+  renderTable();
+}
+
 function renderDetailValue(value) {
   if (value == null || value === '') return '—';
   return escapeHtml(String(value));
@@ -505,65 +564,6 @@ function populateSelects() {
     Object.entries(ESTUDIO_TIPOS).forEach(([value, label]) => {
       selTipo.appendChild(new Option(label, value));
     });
-  }
-
-  function populateFilterOptions() {
-    const selectedTipo = filterState.tipo;
-    const selectedPaciente = filterState.paciente;
-    const typeSelect = filterInputs.tipo;
-    const patientSelect = filterInputs.paciente;
-
-    if (typeSelect) {
-      typeSelect.innerHTML = '<option value="">Todos los tipos</option>';
-      Object.entries(ESTUDIO_TIPOS).forEach(([value, label]) => {
-        typeSelect.appendChild(new Option(label, value));
-      });
-    }
-
-    if (patientSelect) {
-      patientSelect.innerHTML = '<option value="">Todos mis pacientes</option>';
-      (pacientes || []).filter(p => {
-        const pMedId = p.medicoId || p.medico?.id;
-        return p.activo !== false && String(pMedId) === String(medicoId);
-      }).forEach((p) => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = `${p.nombre || ''} ${p.apellido || ''}`.trim();
-        patientSelect.appendChild(opt);
-      });
-    }
-
-    if (typeSelect) typeSelect.value = selectedTipo;
-    if (patientSelect) patientSelect.value = selectedPaciente;
-  }
-
-  function getFilteredEstudios(list) {
-    const q = filterState.q.trim().toLowerCase();
-    return list.filter((e) => {
-      if (filterState.tipo && String(e.tipoEstudio || '') !== String(filterState.tipo)) return false;
-      if (filterState.paciente && String(e.pacienteId || '') !== String(filterState.paciente)) return false;
-      if (filterState.activo !== '' && String(e.activo) !== String(filterState.activo)) return false;
-      if (!q) return true;
-
-      const haystack = [
-        e.nombre,
-        e.codigoEstudio,
-        e.observaciones,
-        e.tipoEstudio,
-      ].filter(Boolean).join(' ').toLowerCase();
-
-      return haystack.includes(q);
-    });
-  }
-
-  function syncFiltersFromUI() {
-    filterState = {
-      q: filterInputs.q?.value || '',
-      tipo: filterInputs.tipo?.value || '',
-      paciente: filterInputs.paciente?.value || '',
-      activo: filterInputs.activo?.value || '',
-    };
-    renderTable();
   }
 
   if (selComp) {

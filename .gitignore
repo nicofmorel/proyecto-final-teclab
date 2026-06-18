@@ -17,6 +17,7 @@ back/**/*.class
 *.log
 logs/
 back/data/*.log
+back/uploads/
 
 # ─── IDEs ───────────────────────────────────────────────────────
 # IntelliJ IDEA
