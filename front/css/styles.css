@@ -356,7 +356,9 @@ body {
 /* ── Login Page ── */
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  background:
+    linear-gradient(rgba(13, 71, 161, 0.42), rgba(13, 71, 161, 0.42)),
+    url('../assets/login-bg.png') center center / cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -364,12 +366,13 @@ body {
 }
 
 .login-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.92);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   padding: 2.5rem 2rem;
   width: 100%;
   max-width: 400px;
+  backdrop-filter: blur(4px);
 }
 
 .login-logo {

@@ -142,6 +142,42 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+function configureConfirmModal(action, name) {
+  medicoAction = action;
+  confirmEl.dataset.action = action;
+  confirmEl.dataset.name = name;
+  document.getElementById('modal-confirm-title').textContent =
+    action === 'reactivate' ? 'Confirmar reactivación' : 'Confirmar baja';
+  document.getElementById('modal-confirm-text').textContent =
+    action === 'reactivate'
+      ? `¿Desea reactivar al médico "${name}"?`
+      : `¿Está seguro que desea dar de baja al médico "${name}"?`;
+  document.getElementById('modal-confirm').querySelector('.modal-body .text-muted').textContent =
+    action === 'reactivate'
+      ? 'Esta acción vuelve a habilitar al médico para iniciar sesión y operar normalmente.'
+      : 'Esta acción desactiva al médico pero no lo elimina permanentemente.';
+  const btn = document.getElementById('btn-confirm-delete');
+  btn.className = action === 'reactivate' ? 'btn btn-success' : 'btn btn-danger';
+  document.getElementById('btn-del-text').textContent = action === 'reactivate' ? 'Reactivar' : 'Dar de Baja';
+}
+
+function syncConfirmModalUI() {
+  const action = confirmEl.dataset.action || 'delete';
+  const name = confirmEl.dataset.name || 'este médico';
+  configureConfirmModal(action, name);
+}
+
+function resetConfirmModal() {
+  medicoAction = 'delete';
+  document.getElementById('modal-confirm-title').textContent = 'Confirmar acción';
+  document.getElementById('modal-confirm-text').textContent = '¿Está seguro que desea dar de baja a este médico?';
+  document.querySelector('#modal-confirm .modal-body .text-muted').textContent =
+    'Esta acción desactiva al médico pero no lo elimina permanentemente.';
+  const btn = document.getElementById('btn-confirm-delete');
+  btn.className = 'btn btn-danger';
+  document.getElementById('btn-del-text').textContent = 'Dar de Baja';
+}
+
 /* ── Open modals ── */
 function openCreate() {
   editingId = null;
@@ -179,19 +215,15 @@ function openEdit(m) {
 
 function openConfirmDelete(m) {
   deletingId = m.id;
-  medicoAction = 'delete';
   const name = `${m.nombre || ''} ${m.apellido || ''}`.trim();
-  const p = document.getElementById('modal-confirm-text');
-  p.textContent = `¿Está seguro que desea dar de baja al médico "${name}"?`;
+  configureConfirmModal('delete', name);
   confirmModal.show();
 }
 
 function openConfirmReactivate(m) {
   deletingId = m.id;
-  medicoAction = 'reactivate';
   const name = `${m.nombre || ''} ${m.apellido || ''}`.trim();
-  const p = document.getElementById('modal-confirm-text');
-  p.textContent = `¿Desea reactivar al médico "${name}"?`;
+  configureConfirmModal('reactivate', name);
   confirmModal.show();
 }
 
@@ -265,9 +297,11 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
   } finally {
     setDelLoading(false);
     deletingId = null;
-    medicoAction = 'delete';
+    resetConfirmModal();
   }
 });
+
+confirmEl.addEventListener('show.bs.modal', syncConfirmModalUI);
 
 /* ── Init ── */
 document.getElementById('btn-nuevo-medico').addEventListener('click', openCreate);
